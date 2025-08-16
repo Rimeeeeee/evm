@@ -1,5 +1,7 @@
 //! Ethereum block executor.
 
+use alloc::collections::BTreeMap;
+
 use super::{
     dao_fork, eip6110,
     receipt_builder::{AlloyReceiptBuilder, ReceiptBuilder, ReceiptBuilderCtx},
@@ -16,13 +18,17 @@ use crate::{
     Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded,
 };
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
+use alloy_block_access_list::{
+    balance_change::BalanceChange, code_change::CodeChange, nonce_change::NonceChange,
+    AccountChanges, BlockAccessList, SlotChanges, StorageChange,
+};
 use alloy_consensus::{Header, Transaction, TxReceipt};
 use alloy_eips::{eip4895::Withdrawals, eip7685::Requests, Encodable2718};
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{Log, B256};
+use alloy_primitives::{Address, Log, B256};
 use revm::{
     context::result::ExecutionResult, context_interface::result::ResultAndState, database::State,
-    DatabaseCommit, Inspector,
+    primitives::StorageKey, state::AccountInfo, DatabaseCommit, Inspector,
 };
 
 /// Context for Ethereum block execution.
@@ -57,6 +63,8 @@ pub struct EthBlockExecutor<'a, Evm, Spec, R: ReceiptBuilder> {
     receipts: Vec<R::Receipt>,
     /// Total gas used by transactions in this block.
     gas_used: u64,
+    /// optional store for building bal
+    pub block_access_list: Option<BlockAccessList>,
 }
 
 impl<'a, Evm, Spec, R> EthBlockExecutor<'a, Evm, Spec, R>
@@ -74,6 +82,7 @@ where
             system_caller: SystemCaller::new(spec.clone()),
             spec,
             receipt_builder,
+            block_access_list: None,
         }
     }
 }
@@ -149,7 +158,24 @@ where
         }));
 
         // Commit the state changes.
-        self.evm.db_mut().commit(state);
+        self.evm.db_mut().commit(state.clone());
+
+        // if let Some(recipient) = tx.tx().to() {
+        //     if let Some(acc) = state.get(&recipient) {
+        //         self.block_access_list
+        //             .clone()
+        //             .unwrap()
+        //             .account_changes
+        //             .push(from_account(recipient, acc.clone()));
+        //     }
+        //     if let Some(acc) = state.get(tx.signer()) {
+        //         self.block_access_list
+        //             .clone()
+        //             .unwrap()
+        //             .account_changes
+        //             .push(from_account(*tx.signer(), acc.clone()));
+        //     }
+        // }
 
         Ok(Some(gas_used))
     }
@@ -207,7 +233,7 @@ where
         self.evm
             .db_mut()
             .increment_balances(balance_increments.clone())
-            .map_err(|_| BlockValidationError::IncrementBalanceFailed)?;
+            .map_err(|_| BlockValidationError::IncrementBalanceFailed)?; //we can do this in revm
 
         // call state hook with changes due to balance increments.
         self.system_caller.try_on_state_with(|| {
@@ -218,10 +244,22 @@ where
                 )
             })
         })?;
-
+        for address in self.receipts.iter().flat_map(|r| r.logs().iter().map(|l| l.address)) {
+            let acc = self.evm.db_mut().database.basic(address).unwrap();
+            self.block_access_list
+                .clone()
+                .unwrap()
+                .account_changes
+                .push(from_account(address, acc.unwrap().clone()))
+        }
         Ok((
             self.evm,
-            BlockExecutionResult { receipts: self.receipts, requests, gas_used: self.gas_used },
+            BlockExecutionResult {
+                receipts: self.receipts,
+                requests,
+                gas_used: self.gas_used,
+                block_access_list: None,
+            },
         ))
     }
 
@@ -303,4 +341,52 @@ where
     {
         EthBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
+}
+
+/// An utility function to build block access list
+pub fn from_account(address: Address, account: AccountInfo) -> AccountChanges {
+    let mut account_changes = AccountChanges::default();
+
+    for read_keys in account.storage_access.reads.values() {
+        for key in read_keys {
+            account_changes.storage_reads.push((*key).into());
+        }
+    }
+
+    // Group writes by slots
+    let mut slot_map: BTreeMap<StorageKey, Vec<StorageChange>> = BTreeMap::new();
+
+    for (tx_index, writes_map) in &account.storage_access.writes {
+        for (slot, (_pre, post)) in writes_map {
+            slot_map
+                .entry(*slot)
+                .or_default()
+                .push(StorageChange { tx_index: *tx_index, new_value: *post });
+        }
+    }
+
+    // Convert slot_map into SlotChanges and push into account_changes
+    for (slot, changes) in slot_map {
+        account_changes.storage_changes.push(SlotChanges { slot: slot.into(), changes });
+    }
+    for (tx_index, (_pre_balance, post_balance)) in &account.balance_change.change {
+        account_changes
+            .balance_changes
+            .push(BalanceChange { tx_index: *tx_index, post_balance: *post_balance });
+    }
+
+    for (tx_index, (_pre_nonce, post_nonce)) in &account.nonce_change.change {
+        account_changes
+            .nonce_changes
+            .push(NonceChange { tx_index: *tx_index, new_nonce: *post_nonce });
+    }
+
+    for (tx_index, code) in &account.code_change.change {
+        account_changes
+            .code_changes
+            .push(CodeChange { tx_index: *tx_index, new_code: code.clone() });
+    }
+
+    account_changes.address = address;
+    account_changes
 }
