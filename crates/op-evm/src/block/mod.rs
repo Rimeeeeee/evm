@@ -240,6 +240,7 @@ where
                 receipts: self.receipts,
                 requests: Default::default(),
                 gas_used,
+                block_access_list: None,
             },
         ))
     }
