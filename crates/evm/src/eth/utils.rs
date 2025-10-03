@@ -6,7 +6,7 @@ use alloy_eips::eip7928::{
     AccountChanges, BlockAccessIndex, BlockAccessList, SlotChanges, StorageChange, MAX_CODE_SIZE,
     MAX_TXS_PER_BLOCK,
 };
-use alloy_primitives::{Address, B256};
+use alloy_primitives::{Address, B256, U256};
 use revm::{
     primitives::{StorageKey, StorageValue},
     state::Account,
@@ -42,7 +42,8 @@ pub fn from_account_with_tx_index(
     address: Address,
     block_access_index: u64,
     account: &Account,
-    is_sender: bool,
+    _is_sender: bool,
+    initial_balance: U256,
 ) -> AccountChanges {
     let mut account_changes = AccountChanges::default();
     for key in &account.storage_access.reads {
@@ -67,8 +68,8 @@ pub fn from_account_with_tx_index(
     }
 
     // Records if only post_balance != pre_balance
-    let (pre_balance, post_balance, zero_value_transfer) = account.balance_change;
-    if (pre_balance != post_balance && !zero_value_transfer) || is_sender {
+    let (_pre_balance, post_balance, _zero_value_transfer) = account.balance_change;
+    if initial_balance != post_balance {
         account_changes.balance_changes.push(BalanceChange { block_access_index, post_balance });
     }
 

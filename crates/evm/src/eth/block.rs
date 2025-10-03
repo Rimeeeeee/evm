@@ -273,9 +273,17 @@ where
         }));
 
         // Commit the state changes.
-        self.evm.db_mut().commit(state.clone());
+        // self.evm.db_mut().commit(state.clone());
         if self.spec.is_amsterdam_active_at_timestamp(self.evm.block().timestamp.saturating_to()) {
             if let Some(addr) = tx.tx().to() {
+                let initial_balance = self
+                    .evm
+                    .db_mut()
+                    .database
+                    .basic(alloy_primitives::Address(*addr))
+                    .unwrap()
+                    .map(|a| a.balance)
+                    .unwrap_or_default();
                 if let Some(acc) = state.get(&addr) {
                     if let Some(bal) = self.block_access_list.as_mut() {
                         bal.push(crate::eth::utils::from_account_with_tx_index(
@@ -283,6 +291,7 @@ where
                             self.receipts.len() as u64,
                             acc,
                             false,
+                            initial_balance,
                         ));
                         tracing::debug!(
                         "BlockAccessList: CREATE parent contract {:#x}, tx_index={}, storage: {:#?}",
@@ -296,12 +305,21 @@ where
             }
 
             if let Some(acc) = state.get(tx.signer()) {
+                let initial_balance = self
+                    .evm
+                    .db_mut()
+                    .database
+                    .basic(*tx.signer())
+                    .unwrap()
+                    .map(|a| a.balance)
+                    .unwrap_or_default();
                 if let Some(bal) = self.block_access_list.as_mut() {
                     bal.push(crate::eth::utils::from_account_with_tx_index(
                         *tx.signer(),
                         self.receipts.len() as u64,
                         acc,
                         true,
+                        initial_balance,
                     ));
                     tracing::debug!(
                         "BlockAccessList: Tx signer arm tx_index={}, storage: {:#?}",
@@ -313,12 +331,21 @@ where
             }
             for (address, account) in state.clone().iter() {
                 if address != tx.signer() && Some(address) != tx.tx().to().as_ref() {
+                    let initial_balance = self
+                        .evm
+                        .db_mut()
+                        .database
+                        .basic(*address)
+                        .unwrap()
+                        .map(|a| a.balance)
+                        .unwrap_or_default();
                     if let Some(bal) = self.block_access_list.as_mut() {
                         bal.push(crate::eth::utils::from_account_with_tx_index(
                             *address,
                             self.receipts.len() as u64,
                             account,
                             false,
+                            initial_balance,
                         ));
                         tracing::debug!(
                             "BlockAccessList: touched address {:#x}, tx_index={}, storage: {:#?}",
@@ -336,6 +363,14 @@ where
             if let Some(access_list) = tx.tx().access_list() {
                 for item in &access_list.0 {
                     let addr = item.address;
+                    let initial_balance = self
+                        .evm
+                        .db_mut()
+                        .database
+                        .basic(addr)
+                        .unwrap()
+                        .map(|a| a.balance)
+                        .unwrap_or_default();
                     if state.contains_key(&addr) {
                         if let Some(bal) = self.block_access_list.as_mut() {
                             bal.push(crate::eth::utils::from_account_with_tx_index(
@@ -343,6 +378,7 @@ where
                                 self.receipts.len() as u64,
                                 state.get(&addr).unwrap(),
                                 false,
+                                initial_balance,
                             ));
                             state.get_mut(&addr).unwrap().clear_state_changes();
                         }
