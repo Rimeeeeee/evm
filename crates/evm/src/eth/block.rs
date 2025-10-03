@@ -280,10 +280,11 @@ where
                     .evm
                     .db_mut()
                     .database
-                    .basic(alloy_primitives::Address(*addr))
-                    .unwrap()
-                    .map(|a| a.balance)
-                    .unwrap_or_default();
+                    .basic(addr)
+                    .ok()
+                    .and_then(|acc| acc.map(|a| a.balance))
+                    .unwrap_or(U256::ZERO);
+
                 if let Some(acc) = state.get(&addr) {
                     if let Some(bal) = self.block_access_list.as_mut() {
                         bal.push(crate::eth::utils::from_account_with_tx_index(
@@ -310,9 +311,10 @@ where
                     .db_mut()
                     .database
                     .basic(*tx.signer())
-                    .unwrap()
-                    .map(|a| a.balance)
-                    .unwrap_or_default();
+                    .ok()
+                    .and_then(|acc| acc.map(|a| a.balance))
+                    .unwrap_or(U256::ZERO);
+
                 if let Some(bal) = self.block_access_list.as_mut() {
                     bal.push(crate::eth::utils::from_account_with_tx_index(
                         *tx.signer(),
@@ -336,9 +338,10 @@ where
                         .db_mut()
                         .database
                         .basic(*address)
-                        .unwrap()
-                        .map(|a| a.balance)
-                        .unwrap_or_default();
+                        .ok()
+                        .and_then(|acc| acc.map(|a| a.balance))
+                        .unwrap_or(U256::ZERO);
+
                     if let Some(bal) = self.block_access_list.as_mut() {
                         bal.push(crate::eth::utils::from_account_with_tx_index(
                             *address,
@@ -368,9 +371,10 @@ where
                         .db_mut()
                         .database
                         .basic(addr)
-                        .unwrap()
-                        .map(|a| a.balance)
-                        .unwrap_or_default();
+                        .ok()
+                        .and_then(|acc| acc.map(|a| a.balance))
+                        .unwrap_or(U256::ZERO);
+
                     if state.contains_key(&addr) {
                         if let Some(bal) = self.block_access_list.as_mut() {
                             bal.push(crate::eth::utils::from_account_with_tx_index(

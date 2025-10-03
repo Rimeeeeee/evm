@@ -46,6 +46,7 @@ pub fn from_account_with_tx_index(
     initial_balance: U256,
 ) -> AccountChanges {
     let mut account_changes = AccountChanges::default();
+    let final_balance = account.info.balance;
     for key in &account.storage_access.reads {
         tracing::debug!("Storage read at {:#x}: {:#x} ", address, key);
         account_changes.storage_reads.push((*key).into());
@@ -69,7 +70,14 @@ pub fn from_account_with_tx_index(
 
     // Records if only post_balance != pre_balance
     let (_pre_balance, post_balance, _zero_value_transfer) = account.balance_change;
-    if initial_balance != post_balance {
+    tracing::debug!(
+        "Balance change at {:#x}: initial: {}, final: {}, post: {}",
+        address,
+        initial_balance,
+        final_balance,
+        post_balance
+    );
+    if initial_balance != post_balance && initial_balance != final_balance {
         account_changes.balance_changes.push(BalanceChange { block_access_index, post_balance });
     }
 
@@ -98,16 +106,6 @@ pub fn from_account_with_tx_index(
         );
         account_changes.nonce_changes.clear();
         account_changes.code_changes.clear();
-
-        if initial_balance != 0 {
-            // If the account had a non-zero balance before selfdestruct, we need to record that it
-            // went to zero.
-            account_changes
-                .balance_changes
-                .push(BalanceChange { block_access_index, post_balance: U256::ZERO });
-        } else {
-            account_changes.balance_changes.clear();
-        }
 
         for slot in &account_changes.storage_changes {
             account_changes.storage_reads.push(slot.slot);
