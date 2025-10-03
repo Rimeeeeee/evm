@@ -385,10 +385,10 @@ where
                     }
                 }
             }
-            // Commit the state changes.
-            self.evm.db_mut().commit(state.clone());
         }
 
+        // Commit the state changes.
+        self.evm.db_mut().commit(state.clone());
         Ok(gas_used)
     }
 
