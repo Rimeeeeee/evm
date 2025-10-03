@@ -98,6 +98,17 @@ pub fn from_account_with_tx_index(
         );
         account_changes.nonce_changes.clear();
         account_changes.code_changes.clear();
+
+        if initial_balance != 0 {
+            // If the account had a non-zero balance before selfdestruct, we need to record that it
+            // went to zero.
+            account_changes
+                .balance_changes
+                .push(BalanceChange { block_access_index, post_balance: U256::ZERO });
+        } else {
+            account_changes.balance_changes.clear();
+        }
+
         for slot in &account_changes.storage_changes {
             account_changes.storage_reads.push(slot.slot);
         }
