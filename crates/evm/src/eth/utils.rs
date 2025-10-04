@@ -42,7 +42,6 @@ pub fn from_account_with_tx_index(
     address: Address,
     block_access_index: u64,
     account: &Account,
-    _is_sender: bool,
     initial_balance: U256,
 ) -> AccountChanges {
     let mut account_changes = AccountChanges::default();
@@ -55,7 +54,7 @@ pub fn from_account_with_tx_index(
     // Group writes by slots
     let mut slot_map: BTreeMap<StorageKey, Vec<StorageChange>> = BTreeMap::new();
 
-    for (slot, (_pre, post)) in &account.storage_access.writes {
+    for (slot, (_, post)) in &account.storage_access.writes {
         tracing::debug!("Storage write at {:#x}: {:#x} -> {:#x}", address, slot, post);
         slot_map
             .entry(*slot)
@@ -69,7 +68,7 @@ pub fn from_account_with_tx_index(
     }
 
     // Records if only post_balance != pre_balance
-    let (_pre_balance, post_balance, _zero_value_transfer) = account.balance_change;
+    let (_, post_balance) = account.balance_change;
     tracing::debug!(
         "Balance change at {:#x}: initial: {}, final: {}, post: {}",
         address,

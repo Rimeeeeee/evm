@@ -291,7 +291,6 @@ where
                             addr,
                             self.receipts.len() as u64,
                             acc,
-                            false,
                             initial_balance,
                         ));
                         tracing::debug!(
@@ -320,7 +319,6 @@ where
                         *tx.signer(),
                         self.receipts.len() as u64,
                         acc,
-                        true,
                         initial_balance,
                     ));
                     tracing::debug!(
@@ -347,7 +345,6 @@ where
                             *address,
                             self.receipts.len() as u64,
                             account,
-                            false,
                             initial_balance,
                         ));
                         tracing::debug!(
@@ -361,7 +358,7 @@ where
                 }
             }
 
-            tracing::debug!("############################################################################################################################################Block No: {:?}",self.evm.block());
+            tracing::debug!("######## Block : {:?} #########", self.evm.block());
             // Store access list changes in bal.
             if let Some(access_list) = tx.tx().access_list() {
                 for item in &access_list.0 {
@@ -381,7 +378,6 @@ where
                                 addr,
                                 self.receipts.len() as u64,
                                 state.get(&addr).unwrap(),
-                                false,
                                 initial_balance,
                             ));
                             state.get_mut(&addr).unwrap().clear_state_changes();
@@ -516,18 +512,6 @@ where
             *balance_increments.entry(dao_fork::DAO_HARDFORK_BENEFICIARY).or_default() +=
                 drained_balance;
         }
-        let coinbase = self.evm.block().beneficiary;
-        // let account = match self.evm.db_mut().database.basic(coinbase) {
-        //     Ok(Some(info)) => info,
-        //     Ok(None) => AccountInfo::default(),
-        //     Err(err) => {
-        //         tracing::error!("DB error fetching account {:?}: {:?}", coinbase, err);
-        //         AccountInfo::default()
-        //     }
-        // };
-
-        // let final_coinbase =
-        // account.balance + U256::from(*balance_increments.get(&coinbase).unwrap_or(&0u128));
 
         // increment balances
         self.evm
@@ -546,18 +530,6 @@ where
         })?;
 
         if self.spec.is_amsterdam_active_at_timestamp(self.evm.block().timestamp.saturating_to()) {
-            // Build Block-level Access List here
-            // 1. Build for all pre execution (Done in `apply_pre_execution_changes`)
-            // 2. Build for all the touched addresses.
-            // 3. Build for all post execution
-            // 4. Sort
-            // for address in self.touched_addresses.iter() {
-            //     if let Ok(Some(account)) = self.evm.db_mut().database.basic(*address) {
-            //         let acc_change = from_account(*address, &account);
-            //         self.block_access_list.as_mut().unwrap().account_changes.push(acc_change);
-            //     }
-            // }
-
             // All post tx balance increments
             for address in balance_increments.keys() {
                 let bal = self.evm.db_mut().database.basic(*address).unwrap().unwrap().balance;
@@ -571,16 +543,6 @@ where
                 );
             }
 
-            // self.block_access_list.as_mut().unwrap().push(
-            //     AccountChanges::default().with_address(coinbase).with_balance_change(
-            //         BalanceChange {
-            //             block_access_index: post_system_tx as u64,
-            //             post_balance: final_coinbase,
-            //         },
-            //     ),
-            // );
-
-            tracing::debug!("Pushed for coinbase : {:?}", coinbase);
             tracing::debug!("Post tx balance increments: {:#?}", balance_increments);
             // Add post execution system contract account changes
             self.block_access_list.as_mut().unwrap().extend(post_system_acc_changes);
