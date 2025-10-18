@@ -144,6 +144,7 @@ where
 
         let gas_used = result.gas_used();
 
+        //BAL TODO
         // append gas used
         self.gas_used += gas_used;
 
