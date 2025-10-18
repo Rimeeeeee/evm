@@ -131,6 +131,8 @@ where
                 storage: Default::default(),
                 status: AccountStatus::Touched,
                 transaction_id: 0,
+                bal_account_index: None,
+                original_info: Default::default(),
             },
         ))
     };
