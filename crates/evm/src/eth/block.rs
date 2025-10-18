@@ -17,6 +17,7 @@ use crate::{
 };
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use alloy_consensus::{Header, Transaction, TxReceipt};
+use alloy_eip7928::BlockAccessList;
 use alloy_eips::{eip4895::Withdrawals, eip7685::Requests, Encodable2718};
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{Log, B256};
@@ -164,6 +165,8 @@ where
             cumulative_gas_used: self.gas_used,
         }));
 
+        // Increment bal_index
+        self.evm.db_mut().bal_index += 1;
         // Commit the state changes.
         self.evm.db_mut().commit(state);
 
@@ -235,6 +238,23 @@ where
             })
         })?;
 
+        let bal = if self
+            .spec
+            .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        {
+            if let Some(db_bal) = &self.evm.db().bal {
+                let alloy_bal = (**db_bal).clone().into_alloy_bal();
+                ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
+                ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+                alloy_bal
+            } else {
+                ::tracing::debug!("No Block Access List found in revm db; using default");
+                BlockAccessList::default()
+            }
+        } else {
+            BlockAccessList::default()
+        };
+
         Ok((
             self.evm,
             BlockExecutionResult {
@@ -242,6 +262,7 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
+                block_access_list: Some(bal),
             },
         ))
     }
