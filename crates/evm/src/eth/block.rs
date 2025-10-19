@@ -168,6 +168,7 @@ where
 
         // Increment bal_index
         self.evm.db_mut().bal_index += 1;
+        ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_index);
         // Commit the state changes.
         self.evm.db_mut().commit(state);
 
@@ -243,6 +244,11 @@ where
             .spec
             .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
         {
+            ::tracing::debug!(
+                "Revm State Bal: {:?}, bb {:?}",
+                self.evm.db().bal,
+                self.evm.db().bal_builder
+            );
             if let Some(db_bal) = &self.evm.db().bal {
                 let alloy_bal = (**db_bal).clone().into_alloy_bal();
                 ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
