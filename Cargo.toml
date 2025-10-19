@@ -40,7 +40,7 @@ alloy-op-evm = { version = "0.22.3", path = "crates/op-evm", default-features = 
 
 # alloy
 
-alloy-eip7928 = { version = "0.1.0", default-features = false, git = "https://github.com/alloy-rs/eips.git" }
+# alloy-eip7928 = { version = "0.1.0", default-features = false, git = "https://github.com/alloy-rs/eips.git" }
 
 alloy-eip2124 = { version = "0.2", default-features = false }
 alloy-chains = { version = "0.2.0", default-features = false }

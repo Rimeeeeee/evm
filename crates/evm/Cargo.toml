@@ -25,7 +25,7 @@ alloy-rpc-types-engine = { workspace = true, optional = true }
 op-alloy-rpc-types-engine = { workspace = true, optional = true }
 
 tracing.workspace = true
-alloy-eip7928.workspace = true
+# alloy-eip7928.workspace = true
 
 revm.workspace = true
 op-revm = { workspace = true, optional = true }
