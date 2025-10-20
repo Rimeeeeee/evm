@@ -249,8 +249,8 @@ where
                 self.evm.db().bal,
                 self.evm.db().bal_builder
             );
-            if let Some(db_bal) = &self.evm.db().bal {
-                let alloy_bal = (**db_bal).clone().into_alloy_bal();
+            if let Some(db_bal) = &self.evm.db().bal_builder {
+                let alloy_bal = db_bal.clone().into_alloy_bal();
                 ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
                 ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
                 alloy_bal
