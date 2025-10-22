@@ -11,6 +11,7 @@ use revm::{
         ContextTr,
     },
     inspector::{JournalExt, NoOpInspector},
+    primitives::hardfork::SpecId,
     DatabaseCommit, Inspector,
 };
 
@@ -53,7 +54,7 @@ pub trait Evm {
     type HaltReason: HaltReasonTr + Send + Sync + 'static;
     /// Identifier of the EVM specification. EVM is expected to use this identifier to determine
     /// which features are enabled.
-    type Spec: Debug + Copy + Hash + Eq + Send + Sync + Default + 'static;
+    type Spec: Debug + Copy + Hash + Eq + Send + Sync + Default + 'static + Clone + Into<SpecId>;
     /// Block environment used by the EVM.
     type BlockEnv: BlockEnvironment;
     /// Precompiles used by the EVM.
@@ -275,7 +276,7 @@ pub trait EvmFactory {
     /// Halt reason. See [`Evm::HaltReason`].
     type HaltReason: HaltReasonTr + Send + Sync + 'static;
     /// The EVM specification identifier, see [`Evm::Spec`].
-    type Spec: Debug + Copy + Hash + Eq + Send + Sync + Default + 'static;
+    type Spec: Debug + Copy + Hash + Eq + Send + Sync + Default + 'static + Clone + Into<SpecId>;
     /// Block environment used by the EVM. See [`Evm::BlockEnv`].
     type BlockEnv: BlockEnvironment;
     /// Precompiles used by the EVM.
