@@ -166,9 +166,9 @@ where
             cumulative_gas_used: self.gas_used,
         }));
 
-        // Increment bal_index
-        self.evm.db_mut().bal_index += 1;
-        ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_index);
+        // // Increment bal_index
+        // self.evm.db_mut().bal_index += 1;
+        // ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_index);
         // Commit the state changes.
         self.evm.db_mut().commit(state);
 
@@ -240,28 +240,28 @@ where
             })
         })?;
 
-        let bal = if self
-            .spec
-            .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
-        {
-            ::tracing::debug!(
-                "Revm State Bal: {:?}, bb {:?}",
-                self.evm.db().bal,
-                self.evm.db().bal_builder
-            );
-            if let Some(db_bal) = &self.evm.db().bal_builder {
-                let mut alloy_bal = db_bal.clone().into_alloy_bal();
-                alloy_bal.sort_by_key(|a| a.address);
-                ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
-                ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
-                alloy_bal
-            } else {
-                ::tracing::debug!("No Block Access List found in revm db; using default");
-                BlockAccessList::default()
-            }
-        } else {
-            BlockAccessList::default()
-        };
+        // let bal = if self
+        //     .spec
+        //     .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        // {
+        //     ::tracing::debug!(
+        //         "Revm State Bal: {:?}, bb {:?}",
+        //         self.evm.db().bal,
+        //         self.evm.db().bal_builder
+        //     );
+        //     if let Some(db_bal) = &self.evm.db().bal_builder {
+        //         let mut alloy_bal = db_bal.clone().into_alloy_bal();
+        //         alloy_bal.sort_by_key(|a| a.address);
+        //         ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
+        //         ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+        //         alloy_bal
+        //     } else {
+        //         ::tracing::debug!("No Block Access List found in revm db; using default");
+        //         BlockAccessList::default()
+        //     }
+        // } else {
+        //     BlockAccessList::default()
+        // };
 
         Ok((
             self.evm,
@@ -270,7 +270,7 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
-                block_access_list: Some(bal),
+                block_access_list: Some(BlockAccessList::default()),
             },
         ))
     }
