@@ -17,9 +17,7 @@ use crate::{
 };
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use alloy_consensus::{Header, Transaction, TxReceipt};
-use alloy_eips::{
-    eip4895::Withdrawals, eip7685::Requests, eip7928::BlockAccessList, Encodable2718,
-};
+use alloy_eips::{eip4895::Withdrawals, eip7685::Requests, Encodable2718};
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{Log, B256};
 use revm::{
@@ -167,9 +165,9 @@ where
         }));
 
         // Increment bal_index
-        self.evm.db_mut().bal_index += 1;
-        ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_index);
-        // Commit the state changes.
+        // self.evm.db_mut().bal_index += 1;
+        // ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_index);
+        // // Commit the state changes.
         self.evm.db_mut().commit(state);
 
         Ok(gas_used)
@@ -240,28 +238,28 @@ where
             })
         })?;
 
-        let bal = if self
-            .spec
-            .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
-        {
-            ::tracing::debug!(
-                "Revm State Bal: {:?}, bb {:?}",
-                self.evm.db().bal,
-                self.evm.db().bal_builder
-            );
-            if let Some(db_bal) = &self.evm.db().bal_builder {
-                let mut alloy_bal = db_bal.clone().into_alloy_bal();
-                alloy_bal.sort_by_key(|a| a.address);
-                ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
-                ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
-                alloy_bal
-            } else {
-                ::tracing::debug!("No Block Access List found in revm db; using default");
-                BlockAccessList::default()
-            }
-        } else {
-            BlockAccessList::default()
-        };
+        // let bal = if self
+        //     .spec
+        //     .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        // {
+        //     ::tracing::debug!(
+        //         "Revm State Bal: {:?}, bb {:?}",
+        //         self.evm.db().bal,
+        //         self.evm.db().bal_builder
+        //     );
+        //     if let Some(db_bal) = &self.evm.db().bal_builder {
+        //         let mut alloy_bal = db_bal.clone().into_alloy_bal();
+        //         alloy_bal.sort_by_key(|a| a.address);
+        //         ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
+        //         ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+        //         alloy_bal
+        //     } else {
+        //         ::tracing::debug!("No Block Access List found in revm db; using default");
+        //         BlockAccessList::default()
+        //     }
+        // } else {
+        //     BlockAccessList::default()
+        // };
 
         Ok((
             self.evm,
@@ -270,7 +268,6 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
-                block_access_list: Some(bal),
             },
         ))
     }
