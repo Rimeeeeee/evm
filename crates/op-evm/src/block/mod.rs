@@ -28,7 +28,7 @@ pub use receipt_builder::OpAlloyReceiptBuilder;
 use receipt_builder::OpReceiptBuilder;
 use revm::{
     context::{result::ResultAndState, Block},
-    database::State,
+    database::{bal::BalDatabase, State},
     DatabaseCommit, Inspector,
 };
 
@@ -133,7 +133,7 @@ impl<'db, DB, E, R, Spec> OpBlockExecutor<E, R, Spec>
 where
     DB: Database + 'db,
     E: Evm<
-        DB = &'db mut State<DB>,
+        DB = &'db mut BalDatabase<State<DB>>,
         Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction> + OpTxEnv,
     >,
     R: OpReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
@@ -180,7 +180,7 @@ impl<'db, DB, E, R, Spec> BlockExecutor for OpBlockExecutor<E, R, Spec>
 where
     DB: Database + 'db,
     E: Evm<
-        DB = &'db mut State<DB>,
+        DB = &'db mut BalDatabase<State<DB>>,
         Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction> + OpTxEnv,
     >,
     R: OpReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
@@ -440,12 +440,12 @@ where
 
     fn create_executor<'a, DB, I>(
         &'a self,
-        evm: EvmF::Evm<&'a mut State<DB>, I>,
+        evm: EvmF::Evm<&'a mut BalDatabase<State<DB>>, I>,
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
         DB: Database + 'a,
-        I: Inspector<EvmF::Context<&'a mut State<DB>>> + 'a,
+        I: Inspector<EvmF::Context<&'a mut BalDatabase<State<DB>>>> + 'a,
     {
         OpBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
@@ -487,7 +487,8 @@ mod tests {
             OpChainHardforks::op_mainnet(),
             OpEvmFactory::default(),
         );
-        let mut db = State::builder().with_database(CacheDB::<EmptyDB>::default()).build();
+        let mut db =
+            BalDatabase::new(State::builder().with_database(CacheDB::<EmptyDB>::default()).build());
         let evm = executor_factory.evm_factory.create_evm(&mut db, EvmEnv::default());
         let mut executor = executor_factory.create_executor(evm, OpBlockExecutionCtx::default());
         let tx = Recovered::new_unchecked(
@@ -566,13 +567,13 @@ mod tests {
     }
 
     fn build_executor<'a>(
-        db: &'a mut State<InMemoryDB>,
+        db: &'a mut BalDatabase<State<InMemoryDB>>,
         receipt_builder: &'a OpAlloyReceiptBuilder,
         op_chain_hardforks: &'a OpChainHardforks,
         gas_limit: u64,
         jovian_timestamp: u64,
     ) -> OpBlockExecutor<
-        OpEvm<&'a mut State<InMemoryDB>, NoOpInspector>,
+        OpEvm<&'a mut BalDatabase<State<InMemoryDB>>, NoOpInspector>,
         &'a OpAlloyReceiptBuilder,
         &'a OpChainHardforks,
     > {
@@ -606,7 +607,7 @@ mod tests {
         const GAS_LIMIT: u64 = 100_000;
         const JOVIAN_TIMESTAMP: u64 = 1746806402;
 
-        let mut db = prepare_jovian_db(DA_FOOTPRINT_GAS_SCALAR);
+        let mut db = BalDatabase::new(prepare_jovian_db(DA_FOOTPRINT_GAS_SCALAR));
         let op_chain_hardforks = OpChainHardforks::new(
             OpHardfork::op_mainnet()
                 .into_iter()
@@ -650,7 +651,7 @@ mod tests {
         const JOVIAN_TIMESTAMP: u64 = 1746806402;
         const GAS_LIMIT: u64 = 100;
 
-        let mut db = prepare_jovian_db(DA_FOOTPRINT_GAS_SCALAR);
+        let mut db = BalDatabase::new(prepare_jovian_db(DA_FOOTPRINT_GAS_SCALAR));
         let op_chain_hardforks = OpChainHardforks::new(
             OpHardfork::op_mainnet()
                 .into_iter()
@@ -706,7 +707,7 @@ mod tests {
         const JOVIAN_TIMESTAMP: u64 = 1746806402;
         const GAS_LIMIT: u64 = 200_000;
 
-        let mut db = prepare_jovian_db(DA_FOOTPRINT_GAS_SCALAR);
+        let mut db = BalDatabase::new(prepare_jovian_db(DA_FOOTPRINT_GAS_SCALAR));
         let op_chain_hardforks = OpChainHardforks::new(
             OpHardfork::op_mainnet()
                 .into_iter()
