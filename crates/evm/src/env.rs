@@ -10,20 +10,14 @@ use revm::{
 
 /// Container type that holds both the configuration and block environment for EVM execution.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct EvmEnv<Spec: core::clone::Clone = SpecId, BlockEnv = revm::context::BlockEnv>
-where
-    Spec: Clone + Into<SpecId>,
-{
+pub struct EvmEnv<Spec = SpecId, BlockEnv = revm::context::BlockEnv> {
     /// The configuration environment with handler settings
     pub cfg_env: CfgEnv<Spec>,
     /// The block environment containing block-specific data
     pub block_env: BlockEnv,
 }
 
-impl<Spec, BlockEnv> EvmEnv<Spec, BlockEnv>
-where
-    Spec: Clone + Into<SpecId>,
-{
+impl<Spec, BlockEnv> EvmEnv<Spec, BlockEnv> {
     /// Create a new `EvmEnv` from its components.
     ///
     /// # Arguments
@@ -35,10 +29,7 @@ where
     }
 }
 
-impl<Spec, BlockEnv: BlockEnvironment> EvmEnv<Spec, BlockEnv>
-where
-    Spec: Clone + Into<SpecId>,
-{
+impl<Spec, BlockEnv: BlockEnvironment> EvmEnv<Spec, BlockEnv> {
     /// Sets an extension on the environment.
     pub fn map_block_env<NewBlockEnv>(
         self,
@@ -144,10 +135,7 @@ where
     }
 }
 
-impl<Spec, BlockEnv> From<(CfgEnv<Spec>, BlockEnv)> for EvmEnv<Spec, BlockEnv>
-where
-    Spec: Clone + Into<SpecId>,
-{
+impl<Spec, BlockEnv> From<(CfgEnv<Spec>, BlockEnv)> for EvmEnv<Spec, BlockEnv> {
     fn from((cfg_env, block_env): (CfgEnv<Spec>, BlockEnv)) -> Self {
         Self { cfg_env, block_env }
     }
