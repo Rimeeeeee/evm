@@ -5,11 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.6](https://github.com/alloy-rs/evm/releases/tag/v0.22.6) - 2025-10-29
+
+### Dependencies
+
+- Bump op-alloy 0.22 ([#206](https://github.com/alloy-rs/evm/issues/206))
+- [deps] Update `alloy-hardforks` deps with the new Jovian timestamps ([#205](https://github.com/alloy-rs/evm/issues/205))
+- [jovian/timestamps] Update `alloy-hardforks` dep ([#203](https://github.com/alloy-rs/evm/issues/203))
+
+### Features
+
+- [precompiles/jovian] Add jovian precompiles to `alloy-evm` ([#204](https://github.com/alloy-rs/evm/issues/204))
+
+## [0.22.5](https://github.com/alloy-rs/evm/releases/tag/v0.22.5) - 2025-10-23
+
+### Bug Fixes
+
+- Blob fee calc ([#202](https://github.com/alloy-rs/evm/issues/202))
+
+### Miscellaneous Tasks
+
+- Release 0.22.5
+
+## [0.22.4](https://github.com/alloy-rs/evm/releases/tag/v0.22.4) - 2025-10-22
+
+### Bug Fixes
+
+- [jovian] Fix fork activation timestamp and query the da footprint from the database cache if available ([#201](https://github.com/alloy-rs/evm/issues/201))
+
+### Miscellaneous Tasks
+
+- Release 0.22.4
+- Fix typo in crates/evm/src/block/system_calls/eip7251.rs ([#199](https://github.com/alloy-rs/evm/issues/199))
+
 ## [0.22.3](https://github.com/alloy-rs/evm/releases/tag/v0.22.3) - 2025-10-14
 
 ### Dependencies
 
 - Bump op-alloy 0.21 ([#198](https://github.com/alloy-rs/evm/issues/198))
+
+### Miscellaneous Tasks
+
+- Release 0.22.3
 
 ## [0.22.2](https://github.com/alloy-rs/evm/releases/tag/v0.22.2) - 2025-10-14
 

@@ -3,7 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.22.3"
+version = "0.22.6"
 edition = "2021"
 rust-version = "1.88"
 authors = ["Alloy Contributors"]
@@ -35,8 +35,8 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [workspace.dependencies]
-alloy-evm = { version = "0.22.3", path = "crates/evm", default-features = false }
-alloy-op-evm = { version = "0.22.3", path = "crates/op-evm", default-features = false }
+alloy-evm = { version = "0.22.6", path = "crates/evm", default-features = false }
+alloy-op-evm = { version = "0.22.6", path = "crates/op-evm", default-features = false }
 
 # alloy
 
@@ -48,18 +48,18 @@ alloy-eips = { version = "1.0.41", default-features = false }
 alloy-consensus = { version = "1.0.41", default-features = false }
 alloy-primitives = { version = "1.0.0", default-features = false }
 alloy-sol-types = { version = "1.0.0", default-features = false }
-alloy-hardforks = { version = "0.4" }
 alloy-rpc-types-eth = { version = "1.0.41", default-features = false }
 alloy-rpc-types-engine = { version = "1.0.41", default-features = false }
+alloy-hardforks = { version = "0.4.2" }
 
 # op-alloy
-alloy-op-hardforks = { version = "0.4" }
-op-alloy-consensus = { version = "0.21", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.21", default-features = false }
+alloy-op-hardforks = { version = "0.4.2" }
+op-alloy-consensus = { version = "0.22", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.22", default-features = false }
 
 # revm
 revm = { version = "30.2.0", default-features = false }
-op-revm = { version = "11.1.2", default-features = false }
+op-revm = { version = "11.2.0", default-features = false }
 
 # misc
 auto_impl = "1"
