@@ -108,7 +108,7 @@ where
         self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
         self.system_caller
             .apply_beacon_root_contract_call(self.ctx.parent_beacon_block_root, &mut self.evm)?;
-
+        tracing::debug!(" Applied pre ex");
         Ok(())
     }
 
@@ -171,7 +171,7 @@ where
         ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_state.bal_index);
         // Commit the state changes.
         self.evm.db_mut().commit(state);
-
+        tracing::debug!("Tx executed sender {:?}, reciever {:?}", tx.tx().kind(), tx.tx().to());
         Ok(gas_used)
     }
 
