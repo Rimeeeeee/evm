@@ -249,10 +249,9 @@ where
                 self.evm.db().bal_state.bal,
                 self.evm.db().bal_state.bal_builder
             );
-            if let Some(db_bal) = &self.evm.db().bal_state.bal_builder {
-                let mut alloy_bal = db_bal.clone().into_alloy_bal();
+
+            if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 alloy_bal.sort_by_key(|a| a.address);
-                ::tracing::debug!("Block Access List from revm: {:?}", db_bal);
                 ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
                 alloy_bal
             } else {
@@ -261,7 +260,8 @@ where
             }
         } else {
             BlockAccessList::default()
-        };
+        }
+        .to_vec();
 
         Ok((
             self.evm,
