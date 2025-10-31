@@ -1,7 +1,5 @@
 //! System contract call functions.
 
-use std::collections::HashMap;
-
 use crate::{
     block::{BlockExecutionError, OnStateHook},
     Evm,
@@ -12,7 +10,7 @@ use alloy_eips::{
     eip7002::WITHDRAWAL_REQUEST_TYPE, eip7251::CONSOLIDATION_REQUEST_TYPE, eip7685::Requests,
 };
 use alloy_hardforks::EthereumHardforks;
-use alloy_primitives::{map::DefaultHashBuilder, Address, Bytes, B256};
+use alloy_primitives::{map::DefaultHashBuilder, map::HashMap, Address, Bytes, B256};
 use revm::{
     state::{Account, EvmState},
     DatabaseCommit,
@@ -77,7 +75,7 @@ where
         // Collect all EIP-7685 requests
         let (mut withdrawal_state, withdrawal_requests) =
             self.apply_withdrawal_requests_contract_call(evm)?;
-        let withdrawal_requests = withdrawal_requests?;
+        let withdrawal_requests: Bytes = withdrawal_requests?;
 
         if !withdrawal_requests.is_empty() {
             requests.push_request_with_type(WITHDRAWAL_REQUEST_TYPE, withdrawal_requests);
@@ -86,7 +84,7 @@ where
         // Collect all EIP-7251 requests
         let (consolidation_state, consolidation_requests) =
             self.apply_consolidation_requests_contract_call(evm)?;
-        let consolidation_requests = consolidation_requests?;
+        let consolidation_requests: Bytes = consolidation_requests?;
         if !consolidation_requests.is_empty() {
             requests.push_request_with_type(CONSOLIDATION_REQUEST_TYPE, consolidation_requests);
         }
