@@ -167,7 +167,7 @@ where
         }));
 
         // Increment bal_index
-        self.evm.db_mut().bal_state.bump_bal_index();
+        self.evm.db_mut().bump_bal_index();
         ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_state.bal_index);
         // Commit the state changes.
         self.evm.db_mut().commit(state);
