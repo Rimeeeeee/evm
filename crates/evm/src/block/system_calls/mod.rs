@@ -1,5 +1,7 @@
 //! System contract call functions.
 
+use std::collections::HashMap;
+
 use crate::{
     block::{BlockExecutionError, OnStateHook},
     Evm,
@@ -10,8 +12,11 @@ use alloy_eips::{
     eip7002::WITHDRAWAL_REQUEST_TYPE, eip7251::CONSOLIDATION_REQUEST_TYPE, eip7685::Requests,
 };
 use alloy_hardforks::EthereumHardforks;
-use alloy_primitives::{Bytes, B256};
-use revm::{state::EvmState, DatabaseCommit};
+use alloy_primitives::{map::DefaultHashBuilder, Address, Bytes, B256};
+use revm::{
+    state::{Account, EvmState},
+    DatabaseCommit,
+};
 
 use super::{StateChangePostBlockSource, StateChangePreBlockSource, StateChangeSource};
 
@@ -65,22 +70,28 @@ where
     pub fn apply_post_execution_changes(
         &mut self,
         evm: &mut impl Evm<DB: DatabaseCommit>,
-    ) -> Result<Requests, BlockExecutionError> {
+    ) -> Result<(HashMap<Address, Account, DefaultHashBuilder>, Requests), BlockExecutionError>
+    {
         let mut requests = Requests::default();
 
         // Collect all EIP-7685 requests
-        let withdrawal_requests = self.apply_withdrawal_requests_contract_call(evm)?;
+        let (mut withdrawal_state, withdrawal_requests) =
+            self.apply_withdrawal_requests_contract_call(evm)?;
+        let withdrawal_requests = withdrawal_requests?;
+
         if !withdrawal_requests.is_empty() {
             requests.push_request_with_type(WITHDRAWAL_REQUEST_TYPE, withdrawal_requests);
         }
 
         // Collect all EIP-7251 requests
-        let consolidation_requests = self.apply_consolidation_requests_contract_call(evm)?;
+        let (consolidation_state, consolidation_requests) =
+            self.apply_consolidation_requests_contract_call(evm)?;
+        let consolidation_requests = consolidation_requests?;
         if !consolidation_requests.is_empty() {
             requests.push_request_with_type(CONSOLIDATION_REQUEST_TYPE, consolidation_requests);
         }
-
-        Ok(requests)
+        withdrawal_state.extend(consolidation_state);
+        Ok((withdrawal_state, requests))
     }
 
     /// Applies the pre-block call to the EIP-2935 blockhashes contract.
@@ -88,7 +99,10 @@ where
         &mut self,
         parent_block_hash: B256,
         evm: &mut impl Evm<DB: DatabaseCommit>,
-    ) -> Result<(), BlockExecutionError> {
+    ) -> Result<
+        HashMap<alloy_primitives::Address, revm::state::Account, DefaultHashBuilder>,
+        BlockExecutionError,
+    > {
         let result_and_state =
             eip2935::transact_blockhashes_contract_call(&self.spec, parent_block_hash, evm)?;
 
@@ -99,10 +113,11 @@ where
                     &res.state,
                 );
             }
-            evm.db_mut().commit(res.state);
+            evm.db_mut().commit(res.state.clone());
+            return Ok(res.state);
         }
 
-        Ok(())
+        Ok(HashMap::default())
     }
 
     /// Applies the pre-block call to the EIP-4788 beacon root contract.
@@ -110,7 +125,10 @@ where
         &mut self,
         parent_beacon_block_root: Option<B256>,
         evm: &mut impl Evm<DB: DatabaseCommit>,
-    ) -> Result<(), BlockExecutionError> {
+    ) -> Result<
+        HashMap<alloy_primitives::Address, revm::state::Account, DefaultHashBuilder>,
+        BlockExecutionError,
+    > {
         let result_and_state =
             eip4788::transact_beacon_root_contract_call(&self.spec, parent_beacon_block_root, evm)?;
 
@@ -121,17 +139,21 @@ where
                     &res.state,
                 );
             }
-            evm.db_mut().commit(res.state);
+            evm.db_mut().commit(res.state.clone());
+            return Ok(res.state);
         }
 
-        Ok(())
+        Ok(HashMap::default())
     }
 
     /// Applies the post-block call to the EIP-7002 withdrawal request contract.
     pub fn apply_withdrawal_requests_contract_call(
         &mut self,
         evm: &mut impl Evm<DB: DatabaseCommit>,
-    ) -> Result<Bytes, BlockExecutionError> {
+    ) -> Result<
+        (HashMap<Address, Account, DefaultHashBuilder>, Result<Bytes, BlockExecutionError>),
+        BlockExecutionError,
+    > {
         let result_and_state = eip7002::transact_withdrawal_requests_contract_call(evm)?;
 
         if let Some(ref mut hook) = &mut self.hook {
@@ -142,16 +164,20 @@ where
                 &result_and_state.state,
             );
         }
-        evm.db_mut().commit(result_and_state.state);
+        evm.db_mut().commit(result_and_state.state.clone());
+        let bytes = eip7002::post_commit(result_and_state.result);
 
-        eip7002::post_commit(result_and_state.result)
+        Ok((result_and_state.state, bytes))
     }
 
     /// Applies the post-block call to the EIP-7251 consolidation requests contract.
     pub fn apply_consolidation_requests_contract_call(
         &mut self,
         evm: &mut impl Evm<DB: DatabaseCommit>,
-    ) -> Result<Bytes, BlockExecutionError> {
+    ) -> Result<
+        (HashMap<Address, Account, DefaultHashBuilder>, Result<Bytes, BlockExecutionError>),
+        BlockExecutionError,
+    > {
         let result_and_state = eip7251::transact_consolidation_requests_contract_call(evm)?;
 
         if let Some(ref mut hook) = &mut self.hook {
@@ -162,9 +188,10 @@ where
                 &result_and_state.state,
             );
         }
-        evm.db_mut().commit(result_and_state.state);
+        evm.db_mut().commit(result_and_state.state.clone());
 
-        eip7251::post_commit(result_and_state.result)
+        let bytes = eip7251::post_commit(result_and_state.result);
+        Ok((result_and_state.state, bytes))
     }
 
     /// Delegate to stored `OnStateHook`, noop if hook is `None`.

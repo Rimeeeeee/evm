@@ -105,9 +105,14 @@ where
             self.spec.is_spurious_dragon_active_at_block(self.evm.block().number().saturating_to());
         self.evm.db_mut().set_state_clear_flag(state_clear_flag);
 
-        self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
-        self.system_caller
+        let blockhash_state = self
+            .system_caller
+            .apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
+        self.evm.db_mut().bal_state.commit(&blockhash_state);
+        let beaconroot_state = self
+            .system_caller
             .apply_beacon_root_contract_call(self.ctx.parent_beacon_block_root, &mut self.evm)?;
+        self.evm.db_mut().bal_state.commit(&beaconroot_state);
         tracing::debug!(" Applied pre ex");
         Ok(())
     }
@@ -170,7 +175,8 @@ where
         self.evm.db_mut().bal_state.bump_bal_index();
         ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_state.bal_index);
         // Commit the state changes.
-        self.evm.db_mut().commit(state);
+        self.evm.db_mut().commit(state.clone());
+        self.evm.db_mut().bal_state.commit(&state);
         tracing::debug!("Tx executed sender {:?}, reciever {:?}", tx.tx().kind(), tx.tx().to());
         Ok(gas_used)
     }
@@ -191,8 +197,10 @@ where
             if !deposit_requests.is_empty() {
                 requests.push_request_with_type(eip6110::DEPOSIT_REQUEST_TYPE, deposit_requests);
             }
-
-            requests.extend(self.system_caller.apply_post_execution_changes(&mut self.evm)?);
+            let (post_state, req) =
+                self.system_caller.apply_post_execution_changes(&mut self.evm)?;
+            self.evm.db_mut().bal_state.commit(&post_state);
+            requests.extend(req);
             requests
         } else {
             Requests::default()
