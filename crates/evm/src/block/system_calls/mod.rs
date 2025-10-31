@@ -10,7 +10,10 @@ use alloy_eips::{
     eip7002::WITHDRAWAL_REQUEST_TYPE, eip7251::CONSOLIDATION_REQUEST_TYPE, eip7685::Requests,
 };
 use alloy_hardforks::EthereumHardforks;
-use alloy_primitives::{map::DefaultHashBuilder, map::HashMap, Address, Bytes, B256};
+use alloy_primitives::{
+    map::{DefaultHashBuilder, HashMap},
+    Address, Bytes, B256,
+};
 use revm::{
     state::{Account, EvmState},
     DatabaseCommit,
