@@ -264,14 +264,30 @@ where
             if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
                     for withdrawal in withdrawals.iter() {
-                        let initial = self
-                            .evm
-                            .db_mut()
-                            .database
-                            .basic(withdrawal.address)
-                            .unwrap()
-                            .unwrap_or_default()
-                            .balance;
+                        let initial = if let Some(account_changes) =
+                            alloy_bal.iter().find(|ac| ac.address == withdrawal.address)
+                        {
+                            if let Some(last_balance) = account_changes.balance_changes.last() {
+                                last_balance.post_balance
+                            } else {
+                                self.evm
+                                    .db_mut()
+                                    .database
+                                    .basic(withdrawal.address)
+                                    .unwrap()
+                                    .unwrap_or_default()
+                                    .balance
+                            }
+                        } else {
+                            self.evm
+                                .db_mut()
+                                .database
+                                .basic(withdrawal.address)
+                                .unwrap()
+                                .unwrap_or_default()
+                                .balance
+                        };
+
                         let final_balance = initial
                             .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
                         if initial != final_balance {
