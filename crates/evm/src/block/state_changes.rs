@@ -131,14 +131,16 @@ where
                 storage: Default::default(),
                 status: AccountStatus::Touched,
                 transaction_id: 0,
-                original_info: Default::default(),
+                original_info: account.info.clone(),
             },
         ))
     };
 
-    balance_increments
+    let evm_state = balance_increments
         .iter()
         .filter(|(_, &balance)| balance != 0)
         .map(|(addr, _)| load_account(addr))
-        .collect::<Result<EvmState, _>>()
+        .collect::<Result<EvmState, _>>();
+    tracing::debug!("Created balance increment state for {:?} accounts", evm_state);
+    evm_state
 }
