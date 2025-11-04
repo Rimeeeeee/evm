@@ -247,7 +247,7 @@ where
         })?;
         tracing::debug!("Out state for withdrawl tracking {:?}", out_state);
 
-        let bal = if self
+        let mut bal = if self
             .spec
             .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
         {
@@ -282,11 +282,12 @@ where
                                     ),
                                 ),
                             );
+                        } else {
+                            alloy_bal.push(AccountChanges::new(withdrawal.address));
                         }
                     }
                 }
-                alloy_bal.sort_by_key(|a| a.address);
-                ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+                tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
                 alloy_bal
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
@@ -296,7 +297,9 @@ where
             BlockAccessList::default()
         }
         .to_vec();
-
+        if self.receipts.is_empty() {
+            bal = bal.into_iter().filter(|a| a.address != self.evm.block().beneficiary()).collect();
+        }
         Ok((
             self.evm,
             BlockExecutionResult {
@@ -304,7 +307,7 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
-                block_access_list: Some(bal),
+                block_access_list: Some(sort_and_remove_duplicates_in_bal(bal)),
             },
         ))
     }
@@ -387,4 +390,28 @@ where
     {
         EthBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
+}
+
+/// Sort block-level access list and removes duplicates entries by merging them together.
+pub fn sort_and_remove_duplicates_in_bal(mut bal: BlockAccessList) -> BlockAccessList {
+    tracing::debug!("Bal before sort: {:#?}", bal);
+    bal.sort_by_key(|ac| ac.address);
+    let mut merged: Vec<AccountChanges> = Vec::new();
+
+    for account in bal {
+        if let Some(last) = merged.last_mut() {
+            if last.address == account.address {
+                // Same address → extend fields
+                last.storage_changes.extend(account.storage_changes);
+                last.storage_reads.extend(account.storage_reads);
+                last.balance_changes.extend(account.balance_changes);
+                last.nonce_changes.extend(account.nonce_changes);
+                last.code_changes.extend(account.code_changes);
+                continue;
+            }
+        }
+        merged.push(account);
+    }
+    tracing::debug!("Bal after sort: {:#?}", merged);
+    merged
 }
