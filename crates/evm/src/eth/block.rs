@@ -18,7 +18,10 @@ use crate::{
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use alloy_consensus::{Header, Transaction, TxReceipt};
 use alloy_eips::{
-    eip4895::Withdrawals, eip7685::Requests, eip7928::BlockAccessList, Encodable2718,
+    eip4895::Withdrawals,
+    eip7685::Requests,
+    eip7928::{AccountChanges, BlockAccessList},
+    Encodable2718,
 };
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{Log, B256};
@@ -167,7 +170,7 @@ where
         }));
 
         // Increment bal_index
-        self.evm.db_mut().bump_bal_index();
+        self.evm.db_mut().bal_state.bump_bal_index();
         ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_state.bal_index);
         // Commit the state changes.
         self.evm.db_mut().commit(state);
@@ -251,6 +254,11 @@ where
             );
 
             if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+                if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
+                    for withdrawal in withdrawals.iter() {
+                        alloy_bal.push(AccountChanges::new(withdrawal.address));
+                    }
+                }
                 alloy_bal.sort_by_key(|a| a.address);
                 ::tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
                 alloy_bal
