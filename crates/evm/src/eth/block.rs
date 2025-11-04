@@ -20,11 +20,11 @@ use alloy_consensus::{Header, Transaction, TxReceipt};
 use alloy_eips::{
     eip4895::Withdrawals,
     eip7685::Requests,
-    eip7928::{AccountChanges, BlockAccessList},
+    eip7928::{AccountChanges, BalanceChange, BlockAccessList},
     Encodable2718,
 };
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{Log, B256};
+use alloy_primitives::{Log, B256, U256};
 use revm::{
     context::Block, context_interface::result::ResultAndState, database::State, DatabaseCommit,
     Inspector,
@@ -262,7 +262,25 @@ where
             if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
                     for withdrawal in withdrawals.iter() {
-                        alloy_bal.push(AccountChanges::new(withdrawal.address));
+                        let initial = self
+                            .evm
+                            .db_mut()
+                            .database
+                            .basic(withdrawal.address)
+                            .unwrap()
+                            .unwrap()
+                            .balance;
+                        let final_balance = initial.saturating_add(U256::from(withdrawal.amount));
+                        if initial != final_balance {
+                            alloy_bal.push(
+                                AccountChanges::new(withdrawal.address).with_balance_change(
+                                    BalanceChange::new(
+                                        self.evm.db().bal_state.bal_index,
+                                        U256::from(final_balance),
+                                    ),
+                                ),
+                            );
+                        }
                     }
                 }
                 alloy_bal.sort_by_key(|a| a.address);
