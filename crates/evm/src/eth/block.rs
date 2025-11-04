@@ -276,7 +276,7 @@ where
                             alloy_bal.push(
                                 AccountChanges::new(withdrawal.address).with_balance_change(
                                     BalanceChange::new(
-                                        self.evm.db().bal_state.bal_index,
+                                        self.evm.db().bal_state.bal_index - 1,
                                         U256::from(final_balance),
                                     ),
                                 ),
