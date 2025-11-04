@@ -234,8 +234,11 @@ where
             .map_err(|_| BlockValidationError::IncrementBalanceFailed)?;
 
         // call state hook with changes due to balance increments.
+        let mut out_state = None;
+
         self.system_caller.try_on_state_with(|| {
             balance_increment_state(&balance_increments, self.evm.db_mut()).map(|state| {
+                out_state = Some(state.clone());
                 (
                     StateChangeSource::PostBlock(StateChangePostBlockSource::BalanceIncrements),
                     Cow::Owned(state),
@@ -252,6 +255,9 @@ where
                 self.evm.db().bal_state.bal,
                 self.evm.db().bal_state.bal_builder
             );
+            if let Some(state) = out_state {
+                self.evm.db_mut().bal_state.commit(&state);
+            }
 
             if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
