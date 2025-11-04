@@ -268,9 +268,10 @@ where
                             .database
                             .basic(withdrawal.address)
                             .unwrap()
-                            .unwrap()
+                            .unwrap_or_default()
                             .balance;
-                        let final_balance = initial.saturating_add(U256::from(withdrawal.amount));
+                        let final_balance = initial
+                            .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
                         if initial != final_balance {
                             alloy_bal.push(
                                 AccountChanges::new(withdrawal.address).with_balance_change(
