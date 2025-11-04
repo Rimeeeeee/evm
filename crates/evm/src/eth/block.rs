@@ -395,16 +395,16 @@ pub fn sort_and_remove_duplicates_in_bal(
     mut alloy_bal: BlockAccessList,
     withdrawal_bal: BlockAccessList,
 ) -> BlockAccessList {
+    tracing::debug!("Bal before modification:{:?}", alloy_bal);
     let mut last_per_address = HashMap::new();
     for account in withdrawal_bal {
-        last_per_address.insert(account.address, account); // overwrites previous entries
+        last_per_address.insert(account.address, account);
     }
 
     alloy_bal.extend(last_per_address.into_values());
 
     alloy_bal.sort_by_key(|ac| ac.address);
 
-    // Step 4: Merge duplicates (same as your original function)
     let mut merged: Vec<AccountChanges> = Vec::new();
     for account in alloy_bal {
         if let Some(last) = merged.last_mut() {
@@ -419,6 +419,6 @@ pub fn sort_and_remove_duplicates_in_bal(
         }
         merged.push(account);
     }
-
+    tracing::debug!("Bal after modification:{:?}", merged);
     merged
 }
