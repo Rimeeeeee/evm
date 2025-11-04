@@ -245,6 +245,7 @@ where
                 )
             })
         })?;
+        tracing::debug!("Out state for withdrawl tracking {:?}", out_state);
 
         let bal = if self
             .spec
@@ -276,7 +277,7 @@ where
                             alloy_bal.push(
                                 AccountChanges::new(withdrawal.address).with_balance_change(
                                     BalanceChange::new(
-                                        self.evm.db().bal_state.bal_index - 1,
+                                        self.evm.db().bal_state.bal_index.saturating_sub(1),
                                         U256::from(final_balance),
                                     ),
                                 ),
