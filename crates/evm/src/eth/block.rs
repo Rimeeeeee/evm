@@ -24,7 +24,7 @@ use alloy_eips::{
     Encodable2718,
 };
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{Log, B256, U256};
+use alloy_primitives::{map::HashMap, Log, B256, U256};
 use revm::{
     context::Block, context_interface::result::ResultAndState, database::State, DatabaseCommit,
     Inspector,
@@ -247,6 +247,7 @@ where
         })?;
         tracing::debug!("Out state for withdrawl tracking {:?}", out_state);
 
+        let last_bal_index = self.receipts.len() as u64 + 1;
         let mut bal = if self
             .spec
             .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
@@ -259,8 +260,8 @@ where
             if let Some(state) = out_state {
                 self.evm.db_mut().bal_state.commit(&state);
             }
-
-            if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+            let mut withdrawal_bal = BlockAccessList::default();
+            if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
                     for withdrawal in withdrawals.iter() {
                         let initial = self
@@ -274,21 +275,18 @@ where
                         let final_balance = initial
                             .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
                         if initial != final_balance {
-                            alloy_bal.push(
+                            withdrawal_bal.push(
                                 AccountChanges::new(withdrawal.address).with_balance_change(
-                                    BalanceChange::new(
-                                        self.receipts.len() as u64 + 1,
-                                        U256::from(final_balance),
-                                    ),
+                                    BalanceChange::new(last_bal_index, U256::from(final_balance)),
                                 ),
                             );
                         } else {
-                            alloy_bal.push(AccountChanges::new(withdrawal.address));
+                            withdrawal_bal.push(AccountChanges::new(withdrawal.address));
                         }
                     }
                 }
                 tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
-                alloy_bal
+                sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
                 BlockAccessList::default()
@@ -297,7 +295,7 @@ where
             BlockAccessList::default()
         }
         .to_vec();
-        if self.receipts.is_empty() {
+        if self.receipts.len() == 0 {
             bal = bal.into_iter().filter(|a| a.address != self.evm.block().beneficiary()).collect();
         }
         Ok((
@@ -307,7 +305,7 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
-                block_access_list: Some(sort_and_remove_duplicates_in_bal(bal)),
+                block_access_list: Some(bal),
             },
         ))
     }
@@ -393,15 +391,24 @@ where
 }
 
 /// Sort block-level access list and removes duplicates entries by merging them together.
-pub fn sort_and_remove_duplicates_in_bal(mut bal: BlockAccessList) -> BlockAccessList {
-    tracing::debug!("Bal before sort: {:#?}", bal);
-    bal.sort_by_key(|ac| ac.address);
-    let mut merged: Vec<AccountChanges> = Vec::new();
+pub fn sort_and_remove_duplicates_in_bal(
+    mut alloy_bal: BlockAccessList,
+    withdrawal_bal: BlockAccessList,
+) -> BlockAccessList {
+    let mut last_per_address = HashMap::new();
+    for account in withdrawal_bal {
+        last_per_address.insert(account.address, account); // overwrites previous entries
+    }
 
-    for account in bal {
+    alloy_bal.extend(last_per_address.into_values());
+
+    alloy_bal.sort_by_key(|ac| ac.address);
+
+    // Step 4: Merge duplicates (same as your original function)
+    let mut merged: Vec<AccountChanges> = Vec::new();
+    for account in alloy_bal {
         if let Some(last) = merged.last_mut() {
             if last.address == account.address {
-                // Same address → extend fields
                 last.storage_changes.extend(account.storage_changes);
                 last.storage_reads.extend(account.storage_reads);
                 last.balance_changes.extend(account.balance_changes);
@@ -412,6 +419,6 @@ pub fn sort_and_remove_duplicates_in_bal(mut bal: BlockAccessList) -> BlockAcces
         }
         merged.push(account);
     }
-    tracing::debug!("Bal after sort: {:#?}", merged);
+
     merged
 }
