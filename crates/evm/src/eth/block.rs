@@ -260,33 +260,35 @@ where
             if let Some(state) = out_state {
                 self.evm.db_mut().bal_state.commit(&state);
             }
-            let mut withdrawal_bal = BlockAccessList::default();
-            if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
-                if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
-                    for withdrawal in withdrawals.iter() {
-                        let initial = self
-                            .evm
-                            .db_mut()
-                            .database
-                            .basic(withdrawal.address)
-                            .unwrap()
-                            .unwrap_or_default()
-                            .balance;
-                        let final_balance = initial
-                            .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
-                        if initial != final_balance {
-                            withdrawal_bal.push(
-                                AccountChanges::new(withdrawal.address).with_balance_change(
-                                    BalanceChange::new(last_bal_index, U256::from(final_balance)),
-                                ),
-                            );
-                        } else {
-                            withdrawal_bal.push(AccountChanges::new(withdrawal.address));
-                        }
-                    }
-                }
+            // let mut withdrawal_bal = BlockAccessList::default();
+            if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+                alloy_bal.sort_by_key(|ac| ac.address);
+                // if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
+                //     for withdrawal in withdrawals.iter() {
+                //         let initial = self
+                //             .evm
+                //             .db_mut()
+                //             .database
+                //             .basic(withdrawal.address)
+                //             .unwrap()
+                //             .unwrap_or_default()
+                //             .balance;
+                //         let final_balance = initial
+                //             .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
+                //         if initial != final_balance {
+                //             withdrawal_bal.push(
+                //                 AccountChanges::new(withdrawal.address).with_balance_change(
+                //                     BalanceChange::new(last_bal_index,
+                // U256::from(final_balance)),                 ),
+                //             );
+                //         } else {
+                //             withdrawal_bal.push(AccountChanges::new(withdrawal.address));
+                //         }
+                //     }
+                // }
                 tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
-                sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
+                // sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
+                alloy_bal
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
                 BlockAccessList::default()

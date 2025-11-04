@@ -136,9 +136,13 @@ where
         ))
     };
 
-    balance_increments
+    let evm_state = balance_increments
         .iter()
         .filter(|(_, &balance)| balance != 0)
         .map(|(addr, _)| load_account(addr))
-        .collect::<Result<EvmState, _>>()
+        .collect::<Result<EvmState, _>>()?;
+
+    state.bal_state.commit(&evm_state);
+
+    Ok(evm_state)
 }
