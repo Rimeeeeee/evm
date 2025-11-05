@@ -310,8 +310,14 @@ where
         }
         .to_vec();
         tracing::debug!("Before coinbase:{:?}", bal);
+
         if bal.len() == 5 {
-            bal = bal.into_iter().filter(|a| a.address != self.evm.block().beneficiary()).collect();
+            bal = bal
+                .into_iter()
+                .filter(|a| {
+                    a.address != self.evm.block().beneficiary() && !a.balance_changes.is_empty()
+                })
+                .collect();
             tracing::debug!("After coinbase:{:?}", bal);
         }
         Ok((
