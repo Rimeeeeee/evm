@@ -311,7 +311,7 @@ where
         .to_vec();
         tracing::debug!("Before coinbase:{:?}", bal);
 
-        if bal.len() == 5 {
+        if self.receipts.len() == 0 {
             let beneficiary = self.evm.block().beneficiary();
             bal =
                 bal.into_iter()
