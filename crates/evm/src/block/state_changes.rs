@@ -115,6 +115,7 @@ pub fn balance_increment_state<DB>(
 where
     DB: Database,
 {
+    tracing::debug!("Entered balance incr fn");
     let mut load_account = |address: &Address| -> Result<(Address, Account), BlockExecutionError> {
         let cache_account = state.load_cache_account(*address).map_err(|_| {
             BlockExecutionError::msg("could not load account for balance increment")

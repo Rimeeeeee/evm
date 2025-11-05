@@ -283,12 +283,15 @@ where
                                 .balance
                         };
 
-                        let final_balance = initial
-                            .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
-                        if initial != final_balance {
+                        // let final_balance = initial
+                        //     .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
+                        if let Some(balance) = balance_increments.get(&withdrawal.address) {
                             withdrawal_bal.push(
                                 AccountChanges::new(withdrawal.address).with_balance_change(
-                                    BalanceChange::new(last_bal_index, U256::from(final_balance)),
+                                    BalanceChange::new(
+                                        last_bal_index,
+                                        U256::from(initial.saturating_add(U256::from(*balance))),
+                                    ),
                                 ),
                             );
                         } else {
