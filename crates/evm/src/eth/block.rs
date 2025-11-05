@@ -306,8 +306,10 @@ where
             BlockAccessList::default()
         }
         .to_vec();
-        if self.receipts.len() == 0 {
+        tracing::debug!("Before coinbase:{:?}", bal);
+        if bal.len() == 5 {
             bal = bal.into_iter().filter(|a| a.address != self.evm.block().beneficiary()).collect();
+            tracing::debug!("After coinbase:{:?}", bal);
         }
         Ok((
             self.evm,
