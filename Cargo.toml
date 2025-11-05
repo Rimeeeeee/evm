@@ -50,10 +50,10 @@ alloy-primitives = { version = "1.0.0", default-features = false }
 alloy-sol-types = { version = "1.0.0", default-features = false }
 alloy-rpc-types-eth = { version = "1.0.41", default-features = false }
 alloy-rpc-types-engine = { version = "1.0.41", default-features = false }
-alloy-hardforks = { version = "0.4.2" }
+alloy-hardforks = { version = "0.4.4" }
 
 # op-alloy
-alloy-op-hardforks = { version = "0.4.2" }
+alloy-op-hardforks = { version = "0.4.4" }
 op-alloy-consensus = { version = "0.22", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.22", default-features = false }
 
