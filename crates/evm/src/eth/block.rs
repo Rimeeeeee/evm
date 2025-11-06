@@ -304,8 +304,8 @@ where
         .to_vec();
         // tracing::debug!("Before coinbase:{:?}", bal);
 
+        let beneficiary = self.evm.block().beneficiary();
         if self.receipts.len() == 0 {
-            let beneficiary = self.evm.block().beneficiary();
             bal =
                 bal.into_iter()
                     .filter(|a| {
@@ -318,6 +318,7 @@ where
                     .collect();
             // tracing::debug!("After coinbase:{:?}", bal);
         }
+        tracing::debug!("Block Coinbase: {}", beneficiary);
         Ok((
             self.evm,
             BlockExecutionResult {
