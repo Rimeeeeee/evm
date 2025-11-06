@@ -244,11 +244,11 @@ where
         tracing::debug!("balance_increments{:?}", balance_increments);
 
         let last_bal_index = self.receipts.len() as u64 + 1;
-        let mut withdrawal_bal = BlockAccessList::default();
         let mut bal = if self
             .spec
             .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
         {
+            let mut withdrawal_bal = BlockAccessList::default();
             if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
                     for withdrawal in withdrawals.iter() {
@@ -293,7 +293,7 @@ where
                     }
                 }
                 // tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
-                sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal.clone())
+                sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
                 BlockAccessList::default()
@@ -303,25 +303,6 @@ where
         }
         .to_vec();
         // tracing::debug!("Before coinbase:{:?}", bal);
-        let benificiary = self.evm().block().beneficiary();
-        let initial = if let Some(account_changes) = bal.iter().find(|ac| ac.address == benificiary)
-        {
-            if let Some(last_balance) = account_changes.balance_changes.last() {
-                last_balance.post_balance
-            } else {
-                self.evm.db_mut().database.basic(benificiary).unwrap().unwrap_or_default().balance
-            }
-        } else {
-            self.evm.db_mut().database.basic(benificiary).unwrap().unwrap_or_default().balance
-        };
-        if let Some(balance) = balance_increments.get(&benificiary) {
-            bal.push(AccountChanges::new(benificiary).with_balance_change(BalanceChange::new(
-                last_bal_index,
-                U256::from(initial.saturating_add(U256::from(*balance))),
-            )));
-        }
-        sort_and_remove_duplicates_in_bal(bal.clone(), withdrawal_bal);
-        tracing::debug!("Beneficiary address:{:?}", benificiary);
 
         if self.receipts.len() == 0 {
             let beneficiary = self.evm.block().beneficiary();
