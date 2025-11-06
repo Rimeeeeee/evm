@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.1](https://github.com/alloy-rs/evm/releases/tag/v0.23.1) - 2025-11-05
+
+### Features
+
+- Add additional internals fns ([#214](https://github.com/alloy-rs/evm/issues/214))
+
+## [0.23.0](https://github.com/alloy-rs/evm/releases/tag/v0.23.0) - 2025-11-03
+
+### Dependencies
+
+- Bump revm ([#211](https://github.com/alloy-rs/evm/issues/211))
+
+### Features
+
+- Add extend_precompiles helper methods ([#208](https://github.com/alloy-rs/evm/issues/208))
+
+### Miscellaneous Tasks
+
+- Release 0.23.0
+- Make `clippy::precedence` happy ([#210](https://github.com/alloy-rs/evm/issues/210))
+
 ## [0.22.6](https://github.com/alloy-rs/evm/releases/tag/v0.22.6) - 2025-10-29
 
 ### Dependencies
@@ -16,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - [precompiles/jovian] Add jovian precompiles to `alloy-evm` ([#204](https://github.com/alloy-rs/evm/issues/204))
+
+### Miscellaneous Tasks
+
+- Release 0.22.6
 
 ## [0.22.5](https://github.com/alloy-rs/evm/releases/tag/v0.22.5) - 2025-10-23
 
