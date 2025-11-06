@@ -174,7 +174,6 @@ where
         ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_state.bal_index);
         // Commit the state changes.
         self.evm.db_mut().commit(state);
-        tracing::debug!("Tx executed sender {:?}, reciever {:?}", tx.tx().kind(), tx.tx().to());
         Ok(gas_used)
     }
 
@@ -249,12 +248,6 @@ where
             .spec
             .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
         {
-            ::tracing::debug!(
-                "Revm State Bal: {:?}, bb {:?}",
-                self.evm.db().bal_state.bal,
-                self.evm.db().bal_state.bal_builder
-            );
-
             let mut withdrawal_bal = BlockAccessList::default();
             if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
@@ -299,7 +292,7 @@ where
                         }
                     }
                 }
-                tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+                // tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
                 sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
@@ -309,9 +302,9 @@ where
             BlockAccessList::default()
         }
         .to_vec();
-        tracing::debug!("Before coinbase:{:?}", bal);
+        // tracing::debug!("Before coinbase:{:?}", bal);
 
-        if bal.len() == 5 {
+        if self.receipts.len() == 0 {
             let beneficiary = self.evm.block().beneficiary();
             bal =
                 bal.into_iter()
@@ -323,7 +316,7 @@ where
                         }
                     })
                     .collect();
-            tracing::debug!("After coinbase:{:?}", bal);
+            // tracing::debug!("After coinbase:{:?}", bal);
         }
         Ok((
             self.evm,
@@ -422,13 +415,13 @@ pub fn sort_and_remove_duplicates_in_bal(
     mut alloy_bal: BlockAccessList,
     withdrawal_bal: BlockAccessList,
 ) -> BlockAccessList {
-    tracing::debug!("Bal before modification:{:?}", alloy_bal);
-    tracing::debug!("Withdrawal bal before: {:?}", withdrawal_bal);
+    // tracing::debug!("Bal before modification:{:?}", alloy_bal);
+    // tracing::debug!("Withdrawal bal before: {:?}", withdrawal_bal);
     let mut last_per_address = HashMap::new();
     for account in withdrawal_bal {
         last_per_address.insert(account.address, account);
     }
-    tracing::debug!("Withdrawal bal after: {:?}", last_per_address);
+    // tracing::debug!("Withdrawal bal after: {:?}", last_per_address);
     alloy_bal.extend(last_per_address.into_values());
 
     alloy_bal.sort_by_key(|ac| ac.address);
