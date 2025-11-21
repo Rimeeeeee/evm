@@ -416,7 +416,7 @@ pub fn sort_and_remove_duplicates_in_bal(
     mut alloy_bal: BlockAccessList,
     withdrawal_bal: BlockAccessList,
 ) -> BlockAccessList {
-    // tracing::debug!("Bal before modification:{:?}", alloy_bal);
+    tracing::debug!("Bal before modification:{:?}", alloy_bal);
     // tracing::debug!("Withdrawal bal before: {:?}", withdrawal_bal);
     let mut last_per_address = HashMap::new();
     for account in withdrawal_bal {
