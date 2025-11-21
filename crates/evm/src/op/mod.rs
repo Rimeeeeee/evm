@@ -1,6 +1,8 @@
 //! Optimism EVM implementation.
 
 mod env;
+#[cfg(feature = "rpc")]
+mod rpc;
 mod spec_id;
 mod tx;
 
