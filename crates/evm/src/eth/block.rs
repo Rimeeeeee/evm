@@ -26,8 +26,10 @@ use alloy_eips::{
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{map::HashMap, Log, B256};
 use revm::{
-    context::Block, context_interface::result::ResultAndState, database::State, DatabaseCommit,
-    Inspector,
+    context::Block,
+    context_interface::result::ResultAndState,
+    database::{DatabaseCommitExt, State},
+    DatabaseCommit, Inspector,
 };
 
 /// Context for Ethereum block execution.
@@ -90,7 +92,7 @@ where
 
 impl<'db, DB, E, Spec, R> BlockExecutor for EthBlockExecutor<'_, E, Spec, R>
 where
-    DB: Database + 'db,
+    DB: DatabaseCommitExt + 'db,
     E: Evm<
         DB = &'db mut State<DB>,
         Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
@@ -227,10 +229,13 @@ where
                 drained_balance;
         }
         // increment balances
-        self.evm
-            .db_mut()
-            .increment_balances(balance_increments.clone())
+        StateDB::increment_balances(&mut self.evm.db_mut(), balance_increments.clone())
             .map_err(|_| BlockValidationError::IncrementBalanceFailed)?;
+
+        // self.evm
+        //     .db_mut()
+        //     .increment_balances(balance_increments.clone())
+        //     .map_err(|_| BlockValidationError::IncrementBalanceFailed)?;
 
         // call state hook with changes due to balance increments.
         self.system_caller.try_on_state_with(|| {
@@ -420,7 +425,7 @@ where
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
-        DB: Database + 'a,
+        DB: Database + DatabaseCommit + 'a,
         I: Inspector<EvmF::Context<&'a mut State<DB>>> + 'a,
     {
         EthBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
