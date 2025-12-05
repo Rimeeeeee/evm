@@ -26,10 +26,8 @@ use alloy_eips::{
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{map::HashMap, Log, B256};
 use revm::{
-    context::Block,
-    context_interface::result::ResultAndState,
-    database::{DatabaseCommitExt, State},
-    DatabaseCommit, Inspector,
+    context::Block, context_interface::result::ResultAndState, database::State, DatabaseCommit,
+    Inspector,
 };
 
 /// Context for Ethereum block execution.
@@ -90,10 +88,11 @@ where
     }
 }
 
-impl<E, Spec, R> BlockExecutor for EthBlockExecutor<'_, E, Spec, R>
+impl<'db, DB, E, Spec, R> BlockExecutor for EthBlockExecutor<'_, E, Spec, R>
 where
+    DB: Database + 'db,
     E: Evm<
-        DB: StateDB + DatabaseCommit,
+        DB = &'db mut State<DB>,
         Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
     >,
     Spec: EthExecutorSpec,
@@ -417,12 +416,12 @@ where
 
     fn create_executor<'a, DB, I>(
         &'a self,
-        evm: EvmF::Evm<DB, I>,
+        evm: EvmF::Evm<&'a mut State<DB>, I>,
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
-        DB: StateDB + DatabaseCommit + Database + 'a,
-        I: Inspector<EvmF::Context<DB>> + 'a,
+        DB: Database + 'a,
+        I: Inspector<EvmF::Context<&'a mut State<DB>>> + 'a,
     {
         EthBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }

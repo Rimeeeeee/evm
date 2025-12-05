@@ -5,8 +5,9 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::{eip7685::Requests, eip7928::BlockAccessList};
 use revm::{
     context::result::{ExecutionResult, ResultAndState},
+    database::State,
     inspector::NoOpInspector,
-    DatabaseCommit, Inspector,
+    Inspector,
 };
 
 mod error;
@@ -329,22 +330,22 @@ pub trait BlockExecutor {
 pub trait BlockExecutorFor<'a, F: BlockExecutorFactory + ?Sized, DB, I = NoOpInspector>
 where
     Self: BlockExecutor<
-        Evm = <F::EvmFactory as EvmFactory>::Evm<DB, I>,
+        Evm = <F::EvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
         Transaction = F::Transaction,
         Receipt = F::Receipt,
     >,
-    DB: StateDB + Database + 'a,
-    I: Inspector<<F::EvmFactory as EvmFactory>::Context<DB>> + 'a,
+    DB: Database + 'a,
+    I: Inspector<<F::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a,
 {
 }
 
 impl<'a, F, DB, I, T> BlockExecutorFor<'a, F, DB, I> for T
 where
     F: BlockExecutorFactory,
-    DB: StateDB + Database + 'a,
-    I: Inspector<<F::EvmFactory as EvmFactory>::Context<DB>> + 'a,
+    DB: Database + 'a,
+    I: Inspector<<F::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a,
     T: BlockExecutor<
-        Evm = <F::EvmFactory as EvmFactory>::Evm<DB, I>,
+        Evm = <F::EvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
         Transaction = F::Transaction,
         Receipt = F::Receipt,
     >,
@@ -468,10 +469,10 @@ pub trait BlockExecutorFactory: 'static {
     /// ```
     fn create_executor<'a, DB, I>(
         &'a self,
-        evm: <Self::EvmFactory as EvmFactory>::Evm<DB, I>,
+        evm: <Self::EvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
-        DB: StateDB + DatabaseCommit + Database + 'a,
-        I: Inspector<<Self::EvmFactory as EvmFactory>::Context<DB>> + 'a;
+        DB: Database + 'a,
+        I: Inspector<<Self::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a;
 }

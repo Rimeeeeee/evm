@@ -26,7 +26,7 @@ pub use receipt_builder::OpAlloyReceiptBuilder;
 use receipt_builder::OpReceiptBuilder;
 use revm::{
     context::{result::ResultAndState, Block},
-    database::DatabaseCommitExt as _,
+    database::State,
     Database as _, DatabaseCommit, Inspector,
 };
 
@@ -417,12 +417,12 @@ where
 
     fn create_executor<'a, DB, I>(
         &'a self,
-        evm: EvmF::Evm<DB, I>,
+        evm: EvmF::Evm<&'a mut State<DB>, I>,
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
-        DB: StateDB + DatabaseCommit + Database + 'a,
-        I: Inspector<EvmF::Context<DB>> + 'a,
+        DB: Database + 'a,
+        I: Inspector<EvmF::Context<&'a mut State<DB>>> + 'a,
     {
         OpBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
@@ -447,7 +447,7 @@ mod tests {
     };
     use revm::{
         context::BlockEnv,
-        database::{CacheDB, EmptyDB, InMemoryDB, State},
+        database::{CacheDB, EmptyDB, InMemoryDB},
         inspector::NoOpInspector,
         primitives::HashMap,
         state::AccountInfo,
