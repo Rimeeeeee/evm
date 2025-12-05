@@ -1,7 +1,7 @@
 //! State database abstraction.
 
 use alloy_primitives::Address;
-use revm::database::{bal::BalDatabaseError, DatabaseCommitExt, State};
+use revm::database::State;
 
 /// A type which has the state of the blockchain.
 ///
@@ -38,7 +38,7 @@ impl<T: StateDB> StateDB for &mut T {
     }
 }
 
-impl<DB: DatabaseCommitExt> StateDB for State<DB> {
+impl<DB: revm::Database> StateDB for State<DB> {
     fn set_state_clear_flag(&mut self, has_state_clear: bool) {
         self.cache.set_state_clear_flag(has_state_clear);
     }
@@ -47,6 +47,6 @@ impl<DB: DatabaseCommitExt> StateDB for State<DB> {
         &mut self,
         balances: impl IntoIterator<Item = (Address, u128)>,
     ) -> Result<(), Self::Error> {
-        self.database.increment_balances(balances).map_err(BalDatabaseError::Database)
+        Self::increment_balances(self, balances)
     }
 }

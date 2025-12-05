@@ -5,9 +5,9 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_eips::{eip7685::Requests, eip7928::BlockAccessList};
 use revm::{
     context::result::{ExecutionResult, ResultAndState},
-    database::{DatabaseCommitExt, State},
+    database::State,
     inspector::NoOpInspector,
-    DatabaseCommit, Inspector,
+    Inspector,
 };
 
 mod error;
@@ -334,7 +334,7 @@ where
         Transaction = F::Transaction,
         Receipt = F::Receipt,
     >,
-    DB: alloc::fmt::Debug + DatabaseCommitExt + 'a,
+    DB: Database + 'a,
     I: Inspector<<F::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a,
 {
 }
@@ -342,7 +342,7 @@ where
 impl<'a, F, DB, I, T> BlockExecutorFor<'a, F, DB, I> for T
 where
     F: BlockExecutorFactory,
-    DB: DatabaseCommitExt + alloc::fmt::Debug + 'a,
+    DB: Database + 'a,
     I: Inspector<<F::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a,
     T: BlockExecutor<
         Evm = <F::EvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
@@ -473,6 +473,6 @@ pub trait BlockExecutorFactory: 'static {
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
-        DB: Database + DatabaseCommit + 'a,
+        DB: Database + 'a,
         I: Inspector<<Self::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a;
 }
