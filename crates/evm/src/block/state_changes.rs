@@ -131,7 +131,7 @@ where
                 storage: Default::default(),
                 status: AccountStatus::Touched,
                 transaction_id: 0,
-                original_info: account.info.clone(),
+                original_info: account.clone(),
             },
         ))
     };

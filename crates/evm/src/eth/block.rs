@@ -11,7 +11,7 @@ use crate::{
         state_changes::{balance_increment_state, post_block_balance_increments},
         BlockExecutionError, BlockExecutionResult, BlockExecutor, BlockExecutorFactory,
         BlockExecutorFor, BlockValidationError, ExecutableTx, OnStateHook,
-        StateChangePostBlockSource, StateChangeSource, SystemCaller,
+        StateChangePostBlockSource, StateChangeSource, StateDB, SystemCaller,
     },
     Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded,
 };
@@ -20,11 +20,11 @@ use alloy_consensus::{Header, Transaction, TxReceipt};
 use alloy_eips::{
     eip4895::Withdrawals,
     eip7685::Requests,
-    eip7928::{AccountChanges, BalanceChange, BlockAccessList},
+    eip7928::{AccountChanges, BlockAccessList},
     Encodable2718,
 };
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{map::HashMap, Log, B256, U256};
+use alloy_primitives::{map::HashMap, Log, B256};
 use revm::{
     context::Block, context_interface::result::ResultAndState, database::State, DatabaseCommit,
     Inspector,
@@ -243,57 +243,89 @@ where
         })?;
         tracing::debug!("balance_increments{:?}", balance_increments);
 
-        let last_bal_index = self.receipts.len() as u64 + 1;
-        let mut bal = if self
+        // let last_bal_index = self.receipts.len() as u64 + 1;
+        // let mut bal = if self
+        //     .spec
+        //     .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        // {
+        //     let mut withdrawal_bal = BlockAccessList::default();
+        //     if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+        //         if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
+        //             for withdrawal in withdrawals.iter() {
+        //                 let initial = if let Some(account_changes) =
+        //                     alloy_bal.iter().find(|ac| ac.address == withdrawal.address)
+        //                 {
+        //                     if let Some(last_balance) = account_changes.balance_changes.last() {
+        //                         last_balance.post_balance
+        //                     } else {
+        //                         self.evm
+        //                             .db_mut()
+        //                             .database
+        //                             .basic(withdrawal.address)
+        //                             .unwrap()
+        //                             .unwrap_or_default()
+        //                             .balance
+        //                     }
+        //                 } else {
+        //                     self.evm
+        //                         .db_mut()
+        //                         .database
+        //                         .basic(withdrawal.address)
+        //                         .unwrap()
+        //                         .unwrap_or_default()
+        //                         .balance
+        //                 };
+
+        //                 // let final_balance = initial
+        //                 //     .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
+        //                 if let Some(balance) = balance_increments.get(&withdrawal.address) {
+        //                     withdrawal_bal.push(
+        //                         AccountChanges::new(withdrawal.address).with_balance_change(
+        //                             BalanceChange::new(
+        //                                 last_bal_index,
+        //                                 U256::from(initial.saturating_add(U256::from(*balance))),
+        //                             ),
+        //                         ),
+        //                     );
+        //                 } else {
+        //                     withdrawal_bal.push(AccountChanges::new(withdrawal.address));
+        //                 }
+        //             }
+        //         }
+        //         // tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+        //         sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
+        //     } else {
+        //         ::tracing::debug!("No Block Access List found in revm db; using default");
+        //         BlockAccessList::default()
+        //     }
+        // } else {
+        //     BlockAccessList::default()
+        // }
+        // .to_vec();
+        // tracing::debug!("Before coinbase:{:?}", bal);
+
+        // let beneficiary = self.evm.block().beneficiary();
+        // if self.receipts.len() == 0 {
+        //     bal =
+        //         bal.into_iter()
+        //             .filter(|a| {
+        //                 if a.address == beneficiary {
+        //                     !a.balance_changes.is_empty()
+        //                 } else {
+        //                     true
+        //                 }
+        //             })
+        //             .collect();
+        //     // tracing::debug!("After coinbase:{:?}", bal);
+        // }
+        // tracing::debug!("Block Coinbase: {}", beneficiary);
+        let bal = if self
             .spec
             .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
         {
-            let mut withdrawal_bal = BlockAccessList::default();
-            if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
-                if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
-                    for withdrawal in withdrawals.iter() {
-                        let initial = if let Some(account_changes) =
-                            alloy_bal.iter().find(|ac| ac.address == withdrawal.address)
-                        {
-                            if let Some(last_balance) = account_changes.balance_changes.last() {
-                                last_balance.post_balance
-                            } else {
-                                self.evm
-                                    .db_mut()
-                                    .database
-                                    .basic(withdrawal.address)
-                                    .unwrap()
-                                    .unwrap_or_default()
-                                    .balance
-                            }
-                        } else {
-                            self.evm
-                                .db_mut()
-                                .database
-                                .basic(withdrawal.address)
-                                .unwrap()
-                                .unwrap_or_default()
-                                .balance
-                        };
-
-                        // let final_balance = initial
-                        //     .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
-                        if let Some(balance) = balance_increments.get(&withdrawal.address) {
-                            withdrawal_bal.push(
-                                AccountChanges::new(withdrawal.address).with_balance_change(
-                                    BalanceChange::new(
-                                        last_bal_index,
-                                        U256::from(initial.saturating_add(U256::from(*balance))),
-                                    ),
-                                ),
-                            );
-                        } else {
-                            withdrawal_bal.push(AccountChanges::new(withdrawal.address));
-                        }
-                    }
-                }
-                // tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
-                sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
+            if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+                alloy_bal.sort_by_key(|ac| ac.address);
+                alloy_bal
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
                 BlockAccessList::default()
@@ -302,23 +334,7 @@ where
             BlockAccessList::default()
         }
         .to_vec();
-        // tracing::debug!("Before coinbase:{:?}", bal);
 
-        let beneficiary = self.evm.block().beneficiary();
-        if self.receipts.len() == 0 {
-            bal =
-                bal.into_iter()
-                    .filter(|a| {
-                        if a.address == beneficiary {
-                            !a.balance_changes.is_empty()
-                        } else {
-                            true
-                        }
-                    })
-                    .collect();
-            // tracing::debug!("After coinbase:{:?}", bal);
-        }
-        tracing::debug!("Block Coinbase: {}", beneficiary);
         Ok((
             self.evm,
             BlockExecutionResult {
