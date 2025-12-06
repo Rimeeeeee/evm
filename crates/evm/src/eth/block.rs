@@ -26,9 +26,7 @@ use alloy_eips::{
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{map::HashMap, Log, B256};
 use revm::{
-    context::Block,
-    context_interface::result::ResultAndState,
-    database::{DatabaseCommitExt, State},
+    context::Block, context_interface::result::ResultAndState, database::DatabaseCommitExt,
     DatabaseCommit, Inspector,
 };
 
@@ -171,8 +169,7 @@ where
         }));
 
         // Increment bal_index
-        self.evm.db_mut().bal_state.bump_bal_index();
-        ::tracing::debug!("Updated BAL index to {}", self.evm.db().bal_state.bal_index);
+        self.evm.db_mut().bump_bal_index();
         // Commit the state changes.
         self.evm.db_mut().commit(state);
         Ok(gas_used)

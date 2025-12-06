@@ -1,5 +1,6 @@
 //! State database abstraction.
 
+use alloy_eips::eip7928::BlockAccessList;
 use revm::database::{states::bundle_state::BundleRetention, BundleState, State};
 
 /// A type which has the state of the blockchain.
@@ -27,6 +28,12 @@ pub trait StateDB: revm::Database {
     /// we at any time revert state of bundle to the state before transition
     /// is applied.
     fn merge_transitions(&mut self, retention: BundleRetention);
+
+    /// Increments the internal BAL index used for tracking BAL transfers.
+    fn bump_bal_index(&mut self);
+
+    /// Takes the built Alloy BAL access list, if any.
+    fn take_built_alloy_bal(&mut self) -> Option<BlockAccessList>;
 }
 
 /// auto_impl unable to reconcile return associated type from supertrait
@@ -46,6 +53,14 @@ impl<T: StateDB> StateDB for &mut T {
     fn merge_transitions(&mut self, retention: BundleRetention) {
         StateDB::merge_transitions(*self, retention);
     }
+
+    fn bump_bal_index(&mut self) {
+        StateDB::bump_bal_index(*self);
+    }
+
+    fn take_built_alloy_bal(&mut self) -> Option<BlockAccessList> {
+        StateDB::take_built_alloy_bal(*self)
+    }
 }
 
 impl<DB: revm::Database> StateDB for State<DB> {
@@ -62,5 +77,11 @@ impl<DB: revm::Database> StateDB for State<DB> {
     }
     fn merge_transitions(&mut self, retention: BundleRetention) {
         Self::merge_transitions(self, retention);
+    }
+    fn bump_bal_index(&mut self) {
+        self.bal_state.bump_bal_index();
+    }
+    fn take_built_alloy_bal(&mut self) -> Option<BlockAccessList> {
+        self.bal_state.take_built_alloy_bal()
     }
 }
