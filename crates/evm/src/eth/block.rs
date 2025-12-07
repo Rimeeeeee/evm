@@ -11,18 +11,23 @@ use crate::{
         state_changes::{balance_increment_state, post_block_balance_increments},
         BlockExecutionError, BlockExecutionResult, BlockExecutor, BlockExecutorFactory,
         BlockExecutorFor, BlockValidationError, ExecutableTx, OnStateHook,
-        StateChangePostBlockSource, StateChangeSource, SystemCaller,
+        StateChangePostBlockSource, StateChangeSource, StateDB, SystemCaller,
     },
     Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded,
 };
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use alloy_consensus::{Header, Transaction, TxReceipt};
-use alloy_eips::{eip4895::Withdrawals, eip7685::Requests, Encodable2718};
+use alloy_eips::{
+    eip4895::Withdrawals,
+    eip7685::Requests,
+    eip7928::{AccountChanges, BlockAccessList},
+    Encodable2718,
+};
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{Log, B256};
+use alloy_primitives::{map::HashMap, Log, B256};
 use revm::{
-    context::Block, context_interface::result::ResultAndState, database::State, DatabaseCommit,
-    Inspector,
+    context::Block, context_interface::result::ResultAndState, database::DatabaseCommitExt,
+    DatabaseCommit, Inspector,
 };
 
 /// Context for Ethereum block execution.
@@ -83,11 +88,10 @@ where
     }
 }
 
-impl<'db, DB, E, Spec, R> BlockExecutor for EthBlockExecutor<'_, E, Spec, R>
+impl<E, Spec, R> BlockExecutor for EthBlockExecutor<'_, E, Spec, R>
 where
-    DB: Database + 'db,
     E: Evm<
-        DB = &'db mut State<DB>,
+        DB: StateDB + DatabaseCommit,
         Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
     >,
     Spec: EthExecutorSpec,
@@ -106,7 +110,7 @@ where
         self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
         self.system_caller
             .apply_beacon_root_contract_call(self.ctx.parent_beacon_block_root, &mut self.evm)?;
-
+        tracing::debug!(" Applied pre ex");
         Ok(())
     }
 
@@ -144,6 +148,7 @@ where
 
         let gas_used = result.gas_used();
 
+        //BAL TODO
         // append gas used
         self.gas_used += gas_used;
 
@@ -163,15 +168,17 @@ where
             cumulative_gas_used: self.gas_used,
         }));
 
+        // Increment bal_index
+        self.evm.db_mut().bump_bal_index();
         // Commit the state changes.
         self.evm.db_mut().commit(state);
-
         Ok(gas_used)
     }
 
     fn finish(
         mut self,
     ) -> Result<(Self::Evm, BlockExecutionResult<R::Receipt>), BlockExecutionError> {
+        self.evm.db_mut().bump_bal_index();
         let requests = if self
             .spec
             .is_prague_active_at_timestamp(self.evm.block().timestamp().saturating_to())
@@ -233,6 +240,99 @@ where
                 )
             })
         })?;
+        tracing::debug!("balance_increments{:?}", balance_increments);
+
+        // let last_bal_index = self.receipts.len() as u64 + 1;
+        // let mut bal = if self
+        //     .spec
+        //     .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        // {
+        //     let mut withdrawal_bal = BlockAccessList::default();
+        //     if let Some(alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+        //         if let Some(withdrawals) = self.ctx.withdrawals.as_deref() {
+        //             for withdrawal in withdrawals.iter() {
+        //                 let initial = if let Some(account_changes) =
+        //                     alloy_bal.iter().find(|ac| ac.address == withdrawal.address)
+        //                 {
+        //                     if let Some(last_balance) = account_changes.balance_changes.last() {
+        //                         last_balance.post_balance
+        //                     } else {
+        //                         self.evm
+        //                             .db_mut()
+        //                             .database
+        //                             .basic(withdrawal.address)
+        //                             .unwrap()
+        //                             .unwrap_or_default()
+        //                             .balance
+        //                     }
+        //                 } else {
+        //                     self.evm
+        //                         .db_mut()
+        //                         .database
+        //                         .basic(withdrawal.address)
+        //                         .unwrap()
+        //                         .unwrap_or_default()
+        //                         .balance
+        //                 };
+
+        //                 // let final_balance = initial
+        //                 //     .saturating_add(U256::from(withdrawal.amount_wei().to::<u128>()));
+        //                 if let Some(balance) = balance_increments.get(&withdrawal.address) {
+        //                     withdrawal_bal.push(
+        //                         AccountChanges::new(withdrawal.address).with_balance_change(
+        //                             BalanceChange::new(
+        //                                 last_bal_index,
+        //                                 U256::from(initial.saturating_add(U256::from(*balance))),
+        //                             ),
+        //                         ),
+        //                     );
+        //                 } else {
+        //                     withdrawal_bal.push(AccountChanges::new(withdrawal.address));
+        //                 }
+        //             }
+        //         }
+        //         // tracing::debug!("Block Access List converted to alloy: {:?}", alloy_bal);
+        //         sort_and_remove_duplicates_in_bal(alloy_bal, withdrawal_bal)
+        //     } else {
+        //         ::tracing::debug!("No Block Access List found in revm db; using default");
+        //         BlockAccessList::default()
+        //     }
+        // } else {
+        //     BlockAccessList::default()
+        // }
+        // .to_vec();
+        // tracing::debug!("Before coinbase:{:?}", bal);
+
+        // let beneficiary = self.evm.block().beneficiary();
+        // if self.receipts.len() == 0 {
+        //     bal =
+        //         bal.into_iter()
+        //             .filter(|a| {
+        //                 if a.address == beneficiary {
+        //                     !a.balance_changes.is_empty()
+        //                 } else {
+        //                     true
+        //                 }
+        //             })
+        //             .collect();
+        //     // tracing::debug!("After coinbase:{:?}", bal);
+        // }
+        // tracing::debug!("Block Coinbase: {}", beneficiary);
+        let bal = if self
+            .spec
+            .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        {
+            if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+                alloy_bal.sort_by_key(|ac| ac.address);
+                alloy_bal
+            } else {
+                ::tracing::debug!("No Block Access List found in revm db; using default");
+                BlockAccessList::default()
+            }
+        } else {
+            BlockAccessList::default()
+        }
+        .to_vec();
 
         Ok((
             self.evm,
@@ -241,6 +341,7 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
+                block_access_list: Some(bal),
             },
         ))
     }
@@ -314,13 +415,47 @@ where
 
     fn create_executor<'a, DB, I>(
         &'a self,
-        evm: EvmF::Evm<&'a mut State<DB>, I>,
+        evm: EvmF::Evm<DB, I>,
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
-        DB: Database + 'a,
-        I: Inspector<EvmF::Context<&'a mut State<DB>>> + 'a,
+        DB: StateDB + DatabaseCommit + Database + 'a,
+        I: Inspector<EvmF::Context<DB>> + 'a,
     {
         EthBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
+}
+
+/// Sort block-level access list and removes duplicates entries by merging them together.
+pub fn sort_and_remove_duplicates_in_bal(
+    mut alloy_bal: BlockAccessList,
+    withdrawal_bal: BlockAccessList,
+) -> BlockAccessList {
+    tracing::debug!("Bal before modification:{:?}", alloy_bal);
+    // tracing::debug!("Withdrawal bal before: {:?}", withdrawal_bal)
+    let mut last_per_address = HashMap::new();
+    for account in withdrawal_bal {
+        last_per_address.insert(account.address, account);
+    }
+    // tracing::debug!("Withdrawal bal after: {:?}", last_per_address);
+    alloy_bal.extend(last_per_address.into_values());
+
+    alloy_bal.sort_by_key(|ac| ac.address);
+
+    let mut merged: Vec<AccountChanges> = Vec::new();
+    for account in alloy_bal {
+        if let Some(last) = merged.last_mut() {
+            if last.address == account.address {
+                last.storage_changes.extend(account.storage_changes);
+                last.storage_reads.extend(account.storage_reads);
+                last.balance_changes.extend(account.balance_changes);
+                last.nonce_changes.extend(account.nonce_changes);
+                last.code_changes.extend(account.code_changes);
+                continue;
+            }
+        }
+        merged.push(account);
+    }
+    tracing::debug!("Bal after modification:{:?}", merged);
+    merged
 }

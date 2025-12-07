@@ -95,10 +95,8 @@ pub fn insert_post_block_withdrawals_balance_increments(
     if spec.is_shanghai_active_at_timestamp(block_timestamp) {
         if let Some(withdrawals) = withdrawals {
             for withdrawal in withdrawals {
-                if withdrawal.amount > 0 {
-                    *balance_increments.entry(withdrawal.address).or_default() +=
-                        withdrawal.amount_wei().to::<u128>();
-                }
+                *balance_increments.entry(withdrawal.address).or_default() +=
+                    withdrawal.amount_wei().to::<u128>();
             }
         }
     }
@@ -114,6 +112,7 @@ pub fn balance_increment_state<DB>(
 where
     DB: Database,
 {
+    tracing::debug!("Entered balance incr fn");
     let mut load_account = |address: &Address| -> Result<(Address, Account), BlockExecutionError> {
         let cache_account = state.basic(*address).map_err(|_| {
             BlockExecutionError::msg("could not load account for balance increment")
@@ -130,13 +129,16 @@ where
                 storage: Default::default(),
                 status: AccountStatus::Touched,
                 transaction_id: 0,
+                original_info: account.clone(),
             },
         ))
     };
 
-    balance_increments
+    let evm_state = balance_increments
         .iter()
         .filter(|(_, &balance)| balance != 0)
         .map(|(addr, _)| load_account(addr))
-        .collect::<Result<EvmState, _>>()
+        .collect::<Result<EvmState, _>>();
+    tracing::debug!("Created balance increment state for {:?} accounts", evm_state);
+    evm_state
 }
