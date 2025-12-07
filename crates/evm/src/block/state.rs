@@ -1,7 +1,10 @@
 //! State database abstraction.
 
 use alloy_eips::eip7928::BlockAccessList;
-use revm::database::{states::bundle_state::BundleRetention, BundleState, State};
+use revm::{
+    database::{states::bundle_state::BundleRetention, BundleState, State},
+    state::bal::Bal,
+};
 
 /// A type which has the state of the blockchain.
 ///
@@ -85,6 +88,7 @@ impl<DB: revm::Database> StateDB for State<DB> {
     fn take_built_alloy_bal(&mut self) -> Option<BlockAccessList> {
         let bal = self.bal_state.take_built_alloy_bal();
         tracing::debug!("bal : {:?}", bal);
+        self.bal_state.bal_builder = Some(Bal::new());
         bal
     }
 }
