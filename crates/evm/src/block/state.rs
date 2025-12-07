@@ -79,9 +79,12 @@ impl<DB: revm::Database> StateDB for State<DB> {
         Self::merge_transitions(self, retention);
     }
     fn bump_bal_index(&mut self) {
-        self.bal_state.bump_bal_index();
+        let bal_index = self.bal_state.bump_bal_index();
+        bal_index
     }
     fn take_built_alloy_bal(&mut self) -> Option<BlockAccessList> {
-        self.bal_state.take_built_alloy_bal()
+        let bal = self.bal_state.take_built_alloy_bal();
+        tracing::debug!("bal : {:?}", bal);
+        bal
     }
 }
