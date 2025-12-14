@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.2](https://github.com/alloy-rs/evm/releases/tag/v0.25.2) - 2025-12-12
+
+### Features
+
+- Add `is_static` to PrecompileInput ([#245](https://github.com/alloy-rs/evm/issues/245))
+
+## [0.25.1](https://github.com/alloy-rs/evm/releases/tag/v0.25.1) - 2025-12-11
+
+### Features
+
+- Add extra_data to EthBlockExecutionCtx ([#244](https://github.com/alloy-rs/evm/issues/244))
+- [error] Add gas limit fns to `InvalidTxError` trait ([#235](https://github.com/alloy-rs/evm/issues/235))
+- Impl `RecoveredTx` for `Recovered<Arc<T>>` ([#243](https://github.com/alloy-rs/evm/issues/243))
+
+### Miscellaneous Tasks
+
+- Release 0.25.1
+
+## [0.25.0](https://github.com/alloy-rs/evm/releases/tag/v0.25.0) - 2025-12-10
+
+### Dependencies
+
+- Bump op-alloy to 0.23 ([#241](https://github.com/alloy-rs/evm/issues/241))
+
+### Features
+
+- [evm] `FromRecoveredTx` `FromTxWithEncoded` traits impl w/ `TxEip4844Variant` ([#230](https://github.com/alloy-rs/evm/issues/230))
+
+### Miscellaneous Tasks
+
+- Release 0.25.0
+- Fix typo in comment ([#239](https://github.com/alloy-rs/evm/issues/239))
+- Fix minor grammar mistakes in EVM system call docs ([#200](https://github.com/alloy-rs/evm/issues/200))
+
+### Other
+
+- [Feature] Relax trait bound `EVM::DB = &'db mut State<DB>` for `BlockExecutor` impls ([#234](https://github.com/alloy-rs/evm/issues/234))
+
 ## [0.24.2](https://github.com/alloy-rs/evm/releases/tag/v0.24.2) - 2025-11-14
 
 ### Documentation
@@ -17,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.24.2
 - Relax bounds ([#231](https://github.com/alloy-rs/evm/issues/231))
 
 ## [0.24.1](https://github.com/alloy-rs/evm/releases/tag/v0.24.1) - 2025-11-12

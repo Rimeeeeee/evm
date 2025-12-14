@@ -41,6 +41,8 @@ pub struct EthBlockExecutionCtx<'a> {
     pub ommers: &'a [Header],
     /// Block withdrawals.
     pub withdrawals: Option<Cow<'a, Withdrawals>>,
+    /// Block extra data.
+    pub extra_data: Bytes,
 }
 
 /// Block executor for Ethereum.
