@@ -24,7 +24,7 @@ use alloy_eips::{
     Encodable2718,
 };
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{map::HashMap, Log, B256};
+use alloy_primitives::{map::HashMap, Bytes, Log, B256};
 use revm::{
     context::Block, context_interface::result::ResultAndState, database::DatabaseCommitExt,
     DatabaseCommit, Inspector,
