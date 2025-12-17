@@ -23,6 +23,9 @@ alloy-op-hardforks = { workspace = true, optional = true }
 alloy-rpc-types-eth = { workspace = true, optional = true }
 alloy-rpc-types-engine = { workspace = true, optional = true }
 
+tracing.workspace = true
+# alloy-eip7928.workspace = true
+
 revm.workspace = true
 op-revm = { workspace = true, optional = true }
 op-alloy = { workspace = true, optional = true }
@@ -38,22 +41,20 @@ test-case.workspace = true
 
 [features]
 default = ["std"]
-secp256k1 = [
-    "std",
-    "alloy-consensus/secp256k1",
-]
+secp256k1 = ["std", "alloy-consensus/secp256k1"]
 std = [
-	"alloy-primitives/std",
-	"revm/std",
-	"alloy-consensus/std",
-	"alloy-eips/std",
-	"alloy-sol-types/std",
-	"derive_more/std",
-	"op-revm?/std",
-	"thiserror/std",
-	"op-alloy?/std",
-	"alloy-rpc-types-eth?/std",
-	"alloy-rpc-types-engine?/std"
+    "alloy-primitives/std",
+    "revm/std",
+    "alloy-consensus/std",
+    "alloy-eips/std",
+    "alloy-sol-types/std",
+    "derive_more/std",
+    "op-revm?/std",
+    "thiserror/std",
+    "op-alloy?/std",
+    "alloy-rpc-types-eth?/std",
+    "alloy-rpc-types-engine?/std",
+    "tracing/std",
 ]
 op = ["op-revm", "op-alloy", "alloy-op-hardforks"]
 overrides = ["dep:alloy-rpc-types-eth"]
