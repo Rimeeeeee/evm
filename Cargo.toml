@@ -39,6 +39,9 @@ alloy-evm = { version = "0.26.3", path = "crates/evm", default-features = false 
 alloy-op-evm = { version = "0.26.3", path = "crates/op-evm", default-features = false }
 
 # alloy
+
+alloy-eip7928 = { version = "0.3.0", default-features = false }
+
 alloy-eip2124 = { version = "0.2", default-features = false }
 alloy-chains = { version = "0.2.0", default-features = false }
 alloy-eips = { version = "1.0.34", default-features = false }
@@ -65,4 +68,13 @@ derive_more = { version = "2", default-features = false, features = ["full"] }
 serde = { version = "1", default-features = false, features = ["derive"] }
 thiserror = { version = "2.0.0", default-features = false }
 serde_json = "1"
+tracing = { version = "0.1.41", default-features = false }
 test-case = "3"
+
+[patch.crates-io]
+# revm = { git = "https://github.com/bluealloy/revm.git", branch = "rakita/bal" }
+# op-revm = { git = "https://github.com/bluealloy/revm.git", branch = "rakita/bal" }
+alloy-eips = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
+alloy-consensus = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
+alloy-rpc-types-eth = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
+alloy-rpc-types-engine = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
