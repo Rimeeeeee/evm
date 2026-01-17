@@ -43,6 +43,8 @@ pub struct EthBlockExecutionCtx<'a> {
     pub withdrawals: Option<Cow<'a, Withdrawals>>,
     /// Block extra data.
     pub extra_data: Bytes,
+    /// Block transactions count hint. Used to preallocate the receipts vector.
+    pub tx_count_hint: Option<usize>,
 }
 
 /// Block executor for Ethereum.
@@ -77,10 +79,11 @@ where
 {
     /// Creates a new [`EthBlockExecutor`]
     pub fn new(evm: Evm, ctx: EthBlockExecutionCtx<'a>, spec: Spec, receipt_builder: R) -> Self {
+        let tx_count_hint = ctx.tx_count_hint.unwrap_or_default();
         Self {
             evm,
             ctx,
-            receipts: Vec::new(),
+            receipts: Vec::with_capacity(tx_count_hint),
             gas_used: 0,
             blob_gas_used: 0,
             system_caller: SystemCaller::new(spec.clone()),
@@ -358,6 +361,10 @@ where
 
     fn evm(&self) -> &Self::Evm {
         &self.evm
+    }
+
+    fn receipts(&self) -> &[Self::Receipt] {
+        &self.receipts
     }
 }
 
