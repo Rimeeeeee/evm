@@ -341,6 +341,7 @@ where
                 requests: Default::default(),
                 gas_used: legacy_gas_used,
                 blob_gas_used: self.da_footprint_used,
+                block_access_list: None,
             },
         ))
     }

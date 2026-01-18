@@ -17,7 +17,9 @@ use crate::{
 };
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use alloy_consensus::{Header, Transaction, TxReceipt};
-use alloy_eips::{eip4895::Withdrawals, eip7685::Requests, Encodable2718};
+use alloy_eips::{
+    eip4895::Withdrawals, eip7685::Requests, eip7928::BlockAccessList, Encodable2718,
+};
 use alloy_hardforks::EthereumHardfork;
 use alloy_primitives::{Bytes, Log, B256};
 use revm::{
@@ -170,6 +172,8 @@ where
             cumulative_gas_used: self.gas_used,
         }));
 
+        self.evm.db_mut().bump_bal_index();
+
         // Commit the state changes.
         self.evm.db_mut().commit(state);
 
@@ -179,6 +183,9 @@ where
     fn finish(
         mut self,
     ) -> Result<(Self::Evm, BlockExecutionResult<R::Receipt>), BlockExecutionError> {
+        //
+        self.evm.db_mut().bump_bal_index();
+
         let requests = if self
             .spec
             .is_prague_active_at_timestamp(self.evm.block().timestamp().saturating_to())
@@ -241,6 +248,22 @@ where
             })
         })?;
 
+        let bal = if self
+            .spec
+            .is_amsterdam_active_at_timestamp(self.evm.block().timestamp().saturating_to())
+        {
+            if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
+                alloy_bal.sort_by_key(|ac| ac.address);
+                alloy_bal
+            } else {
+                ::tracing::debug!("No Block Access List found in revm db; using default");
+                BlockAccessList::default()
+            }
+        } else {
+            BlockAccessList::default()
+        }
+        .to_vec();
+
         Ok((
             self.evm,
             BlockExecutionResult {
@@ -248,6 +271,7 @@ where
                 requests,
                 gas_used: self.gas_used,
                 blob_gas_used: self.blob_gas_used,
+                block_access_list: Some(bal),
             },
         ))
     }

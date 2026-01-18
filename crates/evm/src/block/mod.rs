@@ -2,7 +2,7 @@
 
 use crate::{Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded, RecoveredTx, ToTxEnv};
 use alloc::{boxed::Box, vec::Vec};
-use alloy_eips::eip7685::Requests;
+use alloy_eips::{eip7685::Requests, eip7928::BlockAccessList};
 use revm::{
     context::result::{ExecutionResult, ResultAndState},
     database::State,
@@ -37,6 +37,8 @@ pub struct BlockExecutionResult<T> {
     pub gas_used: u64,
     /// Blob gas used by the block.
     pub blob_gas_used: u64,
+    /// Block Access List of the block
+    pub block_access_list: Option<BlockAccessList>,
 }
 
 impl<T> Default for BlockExecutionResult<T> {
@@ -46,6 +48,7 @@ impl<T> Default for BlockExecutionResult<T> {
             requests: Default::default(),
             gas_used: 0,
             blob_gas_used: 0,
+            block_access_list: None,
         }
     }
 }
