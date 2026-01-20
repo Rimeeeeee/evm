@@ -254,6 +254,7 @@ where
         {
             if let Some(mut alloy_bal) = self.evm.db_mut().take_built_alloy_bal() {
                 alloy_bal.sort_by_key(|ac| ac.address);
+                self.evm.db_mut().bal_state.bal_builder = Some(revm::state::bal::Bal::new());
                 alloy_bal
             } else {
                 ::tracing::debug!("No Block Access List found in revm db; using default");
