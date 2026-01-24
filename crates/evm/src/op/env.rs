@@ -25,9 +25,13 @@ impl EvmEnv<OpSpecId> {
         header: impl BlockHeader,
         chain_spec: impl OpHardforks,
         chain_id: ChainId,
-        slot_num: u64,
     ) -> Self {
-        Self::for_op(EvmEnvInput::from_block_header(header), chain_spec, chain_id, slot_num)
+        Self::for_op(
+            EvmEnvInput::from_block_header(&header),
+            chain_spec,
+            chain_id,
+            header.slot_number().unwrap_or_default(),
+        )
     }
 
     /// Create a new `EvmEnv` with [`SpecId`] from a parent block `header`, `chain_id` and
@@ -45,13 +49,12 @@ impl EvmEnv<OpSpecId> {
         base_fee_per_gas: u64,
         chain_spec: impl OpHardforks,
         chain_id: ChainId,
-        slot_num: u64,
     ) -> Self {
         Self::for_op(
-            EvmEnvInput::for_next(header, attributes, base_fee_per_gas, None),
+            EvmEnvInput::for_next(&header, attributes, base_fee_per_gas, None),
             chain_spec,
             chain_id,
-            slot_num,
+            header.slot_number().unwrap_or_default(),
         )
     }
 
