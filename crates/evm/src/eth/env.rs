@@ -24,8 +24,9 @@ impl EvmEnv<SpecId> {
         chain_spec: impl EthereumHardforks,
         chain_id: ChainId,
         blob_params: Option<BlobParams>,
+        slot_num:u64
     ) -> Self {
-        Self::for_eth(EvmEnvInput::from_block_header(header), chain_spec, chain_id, blob_params)
+        Self::for_eth(EvmEnvInput::from_block_header(header), chain_spec, chain_id, blob_params, slot_num)
     }
 
     /// Create a new `EvmEnv` with [`SpecId`] from a parent block `header`, `chain_id`, `chain_spec`
@@ -45,12 +46,14 @@ impl EvmEnv<SpecId> {
         chain_spec: impl EthereumHardforks,
         chain_id: ChainId,
         blob_params: Option<BlobParams>,
+        slot_num:u64
     ) -> Self {
         Self::for_eth(
             EvmEnvInput::for_next(header, attributes, base_fee_per_gas, blob_params),
             chain_spec,
             chain_id,
             blob_params,
+            slot_num
         )
     }
 
@@ -59,6 +62,7 @@ impl EvmEnv<SpecId> {
         chain_spec: impl EthereumHardforks,
         chain_id: ChainId,
         blob_params: Option<BlobParams>,
+        slot_num:u64,
     ) -> Self {
         let spec =
             crate::spec_by_timestamp_and_block_number(&chain_spec, input.timestamp, input.number);
@@ -91,6 +95,7 @@ impl EvmEnv<SpecId> {
             gas_limit: input.gas_limit,
             basefee: input.base_fee_per_gas,
             blob_excess_gas_and_price,
+            slot_num
         };
 
         Self::new(cfg_env, block_env)
@@ -251,7 +256,8 @@ mod tests {
         let chain_id = 2;
         let spec = EthSpec::mainnet();
         let blob_params = None;
-        let actual_evm_env = EvmEnv::for_eth_block(header, spec, chain_id, blob_params);
+        let slot_num=0;
+        let actual_evm_env = EvmEnv::for_eth_block(header, spec, chain_id, blob_params,slot_num);
 
         assert_eq!(actual_evm_env, expected_evm_env);
     }
