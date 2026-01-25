@@ -72,8 +72,8 @@ tracing = { version = "0.1.41", default-features = false }
 test-case = "3"
 
 [patch.crates-io]
-revm = { git = "https://github.com/bluealloy/revm.git", branch = "main" }
-op-revm = { git = "https://github.com/bluealloy/revm.git", branch = "main" }
+revm = { git = "https://github.com/Rimeeeeee/revm.git", branch = "eip7843" }
+op-revm = { git = "https://github.com/Rimeeeeee/revm.git", branch = "eip7843" }
 alloy-eips = { git = "https://github.com/Soubhik-10/alloy", branch = "eip7843" }
 alloy-consensus = { git = "https://github.com/Soubhik-10/alloy", branch = "eip7843" }
 alloy-rpc-types-eth = { git = "https://github.com/Soubhik-10/alloy", branch = "eip7843" }
