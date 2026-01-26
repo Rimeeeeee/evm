@@ -74,7 +74,7 @@ test-case = "3"
 [patch.crates-io]
 # revm = { git = "https://github.com/bluealloy/revm.git", branch = "rakita/bal" }
 # op-revm = { git = "https://github.com/bluealloy/revm.git", branch = "rakita/bal" }
-alloy-eips = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
-alloy-consensus = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
-alloy-rpc-types-eth = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
-alloy-rpc-types-engine = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-1" }
+alloy-eips = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-2" }
+alloy-consensus = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-2" }
+alloy-rpc-types-eth = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-2" }
+alloy-rpc-types-engine = { git = "https://github.com/Soubhik-10/alloy", branch = "bal-devnet-2" }
