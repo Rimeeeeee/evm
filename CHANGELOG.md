@@ -5,11 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0](https://github.com/alloy-rs/evm/releases/tag/v0.27.0) - 2026-01-22
+
+### Bug Fixes
+
+- Preserve precompile id when converting to dynamic ([#261](https://github.com/alloy-rs/evm/issues/261))
+
+### Features
+
+- Add `BlockExecutor::Result` AT ([#262](https://github.com/alloy-rs/evm/issues/262))
+
+### Other
+
+- Update to tempoxyz ([#259](https://github.com/alloy-rs/evm/issues/259))
+
+### Refactor
+
+- [evm] Use EvmEnv::with_limits() for evm limit configuration ([#253](https://github.com/alloy-rs/evm/issues/253))
+
 ## [0.26.3](https://github.com/alloy-rs/evm/releases/tag/v0.26.3) - 2026-01-16
 
 ### Bug Fixes
 
 - `Default` for `BlockExecutionResult` ([#255](https://github.com/alloy-rs/evm/issues/255))
+
+### Miscellaneous Tasks
+
+- Release 0.26.3
 
 ## [0.26.1](https://github.com/alloy-rs/evm/releases/tag/v0.26.1) - 2026-01-16
 
