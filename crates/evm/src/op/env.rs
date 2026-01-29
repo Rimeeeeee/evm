@@ -26,7 +26,12 @@ impl EvmEnv<OpSpecId> {
         chain_spec: impl OpHardforks,
         chain_id: ChainId,
     ) -> Self {
-        Self::for_op(EvmEnvInput::from_block_header(header), chain_spec, chain_id)
+        Self::for_op(
+            EvmEnvInput::from_block_header(&header),
+            chain_spec,
+            chain_id,
+            header.slot_number().unwrap_or_default(),
+        )
     }
 
     /// Create a new `EvmEnv` with [`SpecId`] from a parent block `header`, `chain_id` and
@@ -46,13 +51,19 @@ impl EvmEnv<OpSpecId> {
         chain_id: ChainId,
     ) -> Self {
         Self::for_op(
-            EvmEnvInput::for_next(header, attributes, base_fee_per_gas, None),
+            EvmEnvInput::for_next(&header, attributes, base_fee_per_gas, None),
             chain_spec,
             chain_id,
+            header.slot_number().unwrap_or_default(),
         )
     }
 
-    fn for_op(input: EvmEnvInput, chain_spec: impl OpHardforks, chain_id: ChainId) -> Self {
+    fn for_op(
+        input: EvmEnvInput,
+        chain_spec: impl OpHardforks,
+        chain_id: ChainId,
+        slot_num: u64,
+    ) -> Self {
         let spec = crate::op::spec_by_timestamp_after_bedrock(&chain_spec, input.timestamp);
         let cfg_env = CfgEnv::new().with_chain_id(chain_id).with_spec_and_mainnet_gas_params(spec);
 
@@ -73,6 +84,7 @@ impl EvmEnv<OpSpecId> {
             basefee: input.base_fee_per_gas,
             // EIP-4844 excess blob gas of this block, introduced in Cancun
             blob_excess_gas_and_price,
+            slot_num,
         };
 
         Self::new(cfg_env, block_env)

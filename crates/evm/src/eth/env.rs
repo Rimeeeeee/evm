@@ -25,7 +25,13 @@ impl EvmEnv<SpecId> {
         chain_id: ChainId,
         blob_params: Option<BlobParams>,
     ) -> Self {
-        Self::for_eth(EvmEnvInput::from_block_header(header), chain_spec, chain_id, blob_params)
+        Self::for_eth(
+            EvmEnvInput::from_block_header(&header),
+            chain_spec,
+            chain_id,
+            blob_params,
+            header.slot_number().unwrap_or_default(),
+        )
     }
 
     /// Create a new `EvmEnv` with [`SpecId`] from a parent block `header`, `chain_id`, `chain_spec`
@@ -47,10 +53,11 @@ impl EvmEnv<SpecId> {
         blob_params: Option<BlobParams>,
     ) -> Self {
         Self::for_eth(
-            EvmEnvInput::for_next(header, attributes, base_fee_per_gas, blob_params),
+            EvmEnvInput::for_next(&header, attributes, base_fee_per_gas, blob_params),
             chain_spec,
             chain_id,
             blob_params,
+            header.slot_number().unwrap_or_default(),
         )
     }
 
@@ -59,6 +66,7 @@ impl EvmEnv<SpecId> {
         chain_spec: impl EthereumHardforks,
         chain_id: ChainId,
         blob_params: Option<BlobParams>,
+        slot_num: u64,
     ) -> Self {
         let spec =
             crate::spec_by_timestamp_and_block_number(&chain_spec, input.timestamp, input.number);
@@ -91,6 +99,7 @@ impl EvmEnv<SpecId> {
             gas_limit: input.gas_limit,
             basefee: input.base_fee_per_gas,
             blob_excess_gas_and_price,
+            slot_num,
         };
 
         Self::new(cfg_env, block_env)
