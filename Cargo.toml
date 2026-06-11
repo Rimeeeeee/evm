@@ -39,6 +39,7 @@ alloy-evm = { version = "0.36.0", path = "crates/evm", default-features = false 
 
 # alloy
 alloy-eip2124 = { version = "0.2", default-features = false }
+alloy-eip7928 = { version = "0.4.1", default-features = false }
 alloy-chains = { version = "0.2.0", default-features = false }
 alloy-eips = { version = "2.0.0", default-features = false }
 alloy-consensus = { version = "2.0.0", default-features = false }
@@ -64,4 +65,5 @@ test-case = "3"
 
 [patch.crates-io]
 alloy-hardforks = { git = "https://github.com/Rimeeeeee/hardforks", branch = "eip-8268" }
-revm = { git = "https://github.com/Rimeeeeee/revm", branch = "eip-8268" }
+alloy-eip7928 = { git = "https://github.com/Rimeeeeee/eips", branch = "eip-8268" }
+revm = { git = "https://github.com/Rimeeeeee/revm", branch = "eip8268-tracing" }
