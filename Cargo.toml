@@ -65,5 +65,5 @@ test-case = "3"
 
 [patch.crates-io]
 alloy-hardforks = { git = "https://github.com/Rimeeeeee/hardforks", branch = "eip-8268" }
-alloy-eip7928 = { git = "https://github.com/Rimeeeeee/eips", branch = "eip-8268" }
-revm = { git = "https://github.com/Rimeeeeee/revm", branch = "eip-8268" }
+# alloy-eip7928 = { git = "https://github.com/Rimeeeeee/eips", branch = "eip-8268" }
+revm = { git = "https://github.com/Rimeeeeee/revm", branch = "bogota" }
