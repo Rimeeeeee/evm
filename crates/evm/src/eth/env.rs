@@ -3,6 +3,7 @@ use alloy_consensus::BlockHeader;
 use alloy_eips::{eip7825::MAX_TX_GAS_LIMIT_OSAKA, eip7840::BlobParams};
 use alloy_hardforks::EthereumHardforks;
 use alloy_primitives::{Address, BlockNumber, BlockTimestamp, ChainId, B256, U256};
+use alloc::vec::Vec;
 use revm::{
     context::{BlockEnv, CfgEnv},
     context_interface::block::BlobExcessGasAndPrice,
@@ -92,6 +93,7 @@ impl EvmEnv<SpecId> {
             basefee: input.base_fee_per_gas,
             blob_excess_gas_and_price,
             slot_num: input.slot_number.unwrap_or_default(),
+            warm_accesses: Vec::new(),
         };
 
         Self::new(cfg_env, block_env)
