@@ -1,9 +1,9 @@
 use crate::EvmEnv;
+use alloc::vec::Vec;
 use alloy_consensus::BlockHeader;
 use alloy_eips::{eip7825::MAX_TX_GAS_LIMIT_OSAKA, eip7840::BlobParams};
 use alloy_hardforks::EthereumHardforks;
 use alloy_primitives::{Address, BlockNumber, BlockTimestamp, ChainId, B256, U256};
-use alloc::vec::Vec;
 use revm::{
     context::{BlockEnv, CfgEnv},
     context_interface::block::BlobExcessGasAndPrice,
@@ -82,6 +82,7 @@ impl EvmEnv<SpecId> {
             });
 
         let is_merge_active = chain_spec.is_paris_active_at_block(input.number);
+        let is_bogota_active = chain_spec.is_bogota_active_at_timestamp(input.timestamp);
 
         let block_env = BlockEnv {
             number: U256::from(input.number),
@@ -93,7 +94,7 @@ impl EvmEnv<SpecId> {
             basefee: input.base_fee_per_gas,
             blob_excess_gas_and_price,
             slot_num: input.slot_number.unwrap_or_default(),
-            warm_accesses: Vec::new(),
+            warm_accesses: if is_bogota_active { Some(Vec::new()) } else { None },
         };
 
         Self::new(cfg_env, block_env)
