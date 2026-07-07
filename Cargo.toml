@@ -41,13 +41,13 @@ alloy-evm = { version = "0.37.0", path = "crates/evm", default-features = false 
 alloy-eip2124 = { version = "0.2", default-features = false }
 alloy-eip7928 = { version = "0.4.1", default-features = false }
 alloy-chains = { version = "0.2.0", default-features = false }
-alloy-eips = { version = "2.0.0", default-features = false }
-alloy-consensus = { version = "2.0.0", default-features = false }
+alloy-eips = { version = "2.1.0", default-features = false }
+alloy-consensus = { version = "2.1.0", default-features = false }
 alloy-primitives = { version = "1.0.0", default-features = false }
 alloy-sol-types = { version = "1.0.0", default-features = false }
 alloy-hardforks = { version = "0.4.7" }
-alloy-rpc-types-eth = { version = "2.0.0", default-features = false }
-alloy-rpc-types-engine = { version = "2.0.0", default-features = false }
+alloy-rpc-types-eth = { version = "2.1.0", default-features = false }
+alloy-rpc-types-engine = { version = "2.1.0", default-features = false }
 
 # revm
 revm = { version = "41.0.0", default-features = false }
@@ -67,3 +67,7 @@ test-case = "3"
 alloy-hardforks = { git = "https://github.com/Rimeeeeee/hardforks", branch = "eip-8268" }
 # alloy-eip7928 = { git = "https://github.com/Rimeeeeee/eips", branch = "eip-8268" }
 revm = { git = "https://github.com/Rimeeeeee/revm", branch = "eip-8289" }
+alloy-consensus = { git = "https://github.com/Rimeeeeee/alloy", branch = "eip-8289" }
+alloy-eips = { git = "https://github.com/Rimeeeeee/alloy", branch = "eip-8289" }
+alloy-rpc-types-eth = { git = "https://github.com/Rimeeeeee/alloy", branch = "eip-8289" }
+alloy-rpc-types-engine = { git = "https://github.com/Rimeeeeee/alloy", branch = "eip-8289" }
