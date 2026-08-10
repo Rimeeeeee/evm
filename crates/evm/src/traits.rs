@@ -1,16 +1,16 @@
 //! EVM traits.
 
-use crate::Database;
+use crate::{env::BlockEnvironment, Database};
 use alloc::boxed::Box;
 use alloy_primitives::{Address, Bytes, Log, TxKind, B256, U256};
-use core::{error::Error, fmt, fmt::Debug};
+use core::{any::Any, error::Error, fmt, fmt::Debug};
 use revm::{
     context::{
         journaled_state::{
             account::JournaledAccountTr, JournalCheckpoint, JournalLoadError, TransferError,
         },
         result::InvalidTransaction,
-        Block, Cfg, ContextTr, DBErrorMarker, JournalTr,
+        Cfg, ContextTr, DBErrorMarker, JournalTr,
     },
     interpreter::{SStoreResult, StateLoad},
     primitives::{StorageKey, StorageValue},
@@ -52,7 +52,7 @@ impl EvmInternalsError {
 /// associated types (e.g. `access_list`, `authorization_list`). This trait mirrors
 /// the dyn-compatible subset of those methods, allowing transaction data to be
 /// accessed through `&dyn TransactionTr` in [`EvmInternals`].
-pub trait TransactionTr {
+pub trait TransactionTr: Any {
     /// Returns the transaction type.
     ///
     /// Depending on this field other functions should be called.
@@ -165,7 +165,7 @@ pub trait TransactionTr {
 
 impl<T> TransactionTr for T
 where
-    T: revm::context::Transaction,
+    T: revm::context::Transaction + 'static,
 {
     fn tx_type(&self) -> u8 {
         revm::context::Transaction::tx_type(self)
@@ -469,7 +469,7 @@ where
 /// Helper type exposing hooks into EVM and access to evm internal settings.
 pub struct EvmInternals<'a> {
     internals: Box<dyn EvmInternalsTr + 'a>,
-    block_env: &'a (dyn Block + 'a),
+    block_env: &'a dyn BlockEnvironment,
     chain_id: u64,
     tx_origin: Address,
     tx_env: &'a dyn TransactionTr,
@@ -479,7 +479,7 @@ impl<'a> EvmInternals<'a> {
     /// Creates a new [`EvmInternals`] instance.
     pub fn new<T>(
         journal: &'a mut T,
-        block_env: &'a dyn Block,
+        block_env: &'a dyn BlockEnvironment,
         cfg_env: &'a impl Cfg,
         tx_env: &'a dyn TransactionTr,
     ) -> Self
@@ -498,15 +498,21 @@ impl<'a> EvmInternals<'a> {
     /// Creates a new [`EvmInternals`] instance from a [`ContextTr`].
     pub fn from_context<CTX>(ctx: &'a mut CTX) -> Self
     where
-        CTX: ContextTr<Journal: JournalTr<Database: Database> + Debug>,
+        CTX: ContextTr<Block: BlockEnvironment, Journal: JournalTr<Database: Database> + Debug>,
+        CTX::Tx: 'static,
     {
         let (block, tx, cfg, journaled_state, ..) = ctx.all_mut();
         Self::new(journaled_state, block, cfg, tx)
     }
 
     /// Returns the  evm's block information.
-    pub const fn block_env(&self) -> impl Block + 'a {
+    pub const fn block_env(&self) -> &dyn BlockEnvironment {
         self.block_env
+    }
+
+    /// Attempts to downcast the block environment to a concrete type.
+    pub fn block_env_downcast_ref<T: BlockEnvironment>(&self) -> Option<&T> {
+        (self.block_env as &dyn core::any::Any).downcast_ref()
     }
 
     /// Returns the current block number.
@@ -534,6 +540,11 @@ impl<'a> EvmInternals<'a> {
     /// Returns the current transaction information.
     pub fn tx_env(&self) -> &dyn TransactionTr {
         self.tx_env
+    }
+
+    /// Attempts to downcast the transaction environment to a concrete type.
+    pub fn tx_env_downcast_ref<T: TransactionTr>(&self) -> Option<&T> {
+        (self.tx_env as &dyn Any).downcast_ref()
     }
 
     /// Returns a mutable reference to [`Database`] implementation with erased error type.

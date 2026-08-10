@@ -1,6 +1,6 @@
 //! Helpers for dealing with Precompiles.
 
-use crate::{Database, EvmInternals};
+use crate::{env::BlockEnvironment, Database, EvmInternals};
 use alloc::{
     borrow::Cow,
     boxed::Box,
@@ -550,8 +550,8 @@ impl core::fmt::Debug for PrecompilesMap {
 impl<BlockEnv, TxEnv, CfgEnv, DB, Chain>
     PrecompileProvider<Context<BlockEnv, TxEnv, CfgEnv, DB, Journal<DB>, Chain>> for PrecompilesMap
 where
-    BlockEnv: revm::context::Block,
-    TxEnv: revm::context::Transaction,
+    BlockEnv: BlockEnvironment,
+    TxEnv: revm::context::Transaction + 'static,
     CfgEnv: revm::context::Cfg,
     DB: Database,
 {
@@ -987,7 +987,7 @@ mod tests {
     use crate::eth::EthEvmContext;
     use alloy_primitives::{address, Bytes};
     use revm::{
-        context::Block,
+        context::{BlockEnv, TxEnv},
         database::EmptyDB,
         precompile::{PrecompileId, PrecompileOutput},
         primitives::hardfork::SpecId,
@@ -1069,6 +1069,15 @@ mod tests {
             result.bytes, constant_bytes,
             "Modified precompile should return the constant value"
         );
+    }
+
+    #[test]
+    fn test_evm_internals_downcasts_envs() {
+        let mut ctx = EthEvmContext::new(EmptyDB::default(), Default::default());
+        let internals = EvmInternals::from_context(&mut ctx);
+
+        assert!(internals.block_env_downcast_ref::<BlockEnv>().is_some());
+        assert!(internals.tx_env_downcast_ref::<TxEnv>().is_some());
     }
 
     #[test]
