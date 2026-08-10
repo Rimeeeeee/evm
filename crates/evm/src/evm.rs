@@ -55,7 +55,7 @@ pub trait Evm {
     /// which features are enabled.
     type Spec: Debug + Copy + Hash + Eq + Send + Sync + Default + 'static;
     /// Block environment used by the EVM.
-    type BlockEnv: BlockEnvironment;
+    type BlockEnv: BlockEnvironment + Clone;
     /// Precompiles used by the EVM.
     type Precompiles;
     /// Evm inspector.
@@ -269,8 +269,11 @@ pub trait EvmFactory {
         Inspector = I,
     >;
 
-    /// The EVM context for inspectors
-    type Context<DB: Database>: ContextTr<Db = DB, Journal: JournalExt>;
+    /// The EVM context for inspectors.
+    ///
+    /// The context may use a database adapter around `DB`, while the EVM continues to expose and
+    /// return the original database as [`Evm::DB`].
+    type Context<DB: Database>: ContextTr<Journal: JournalExt>;
     /// Transaction environment.
     type Tx: IntoTxEnv<Self::Tx>;
     /// EVM error. See [`Evm::Error`].
@@ -280,7 +283,7 @@ pub trait EvmFactory {
     /// The EVM specification identifier, see [`Evm::Spec`].
     type Spec: Debug + Copy + Hash + Eq + Send + Sync + Default + 'static;
     /// Block environment used by the EVM. See [`Evm::BlockEnv`].
-    type BlockEnv: BlockEnvironment;
+    type BlockEnv: BlockEnvironment + Clone;
     /// Precompiles used by the EVM.
     type Precompiles;
 
