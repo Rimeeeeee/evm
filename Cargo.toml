@@ -41,16 +41,16 @@ alloy-evm = { version = "0.39.0", path = "crates/evm", default-features = false 
 alloy-eip2124 = { version = "0.2", default-features = false }
 alloy-eip7928 = { version = "0.4.1", default-features = false }
 alloy-chains = { version = "0.2.0", default-features = false }
-alloy-eips = { git = "https://github.com/Rimeeeeee/alloy", branch = "feat/eip8141-transaction", default-features = false }
-alloy-consensus = { git = "https://github.com/Rimeeeeee/alloy", branch = "feat/eip8141-transaction", default-features = false }
+alloy-eips = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
+alloy-consensus = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
 alloy-primitives = { version = "1.0.0", default-features = false }
 alloy-sol-types = { version = "1.0.0", default-features = false }
 alloy-hardforks = "0.4.8"
-alloy-rpc-types-eth = { git = "https://github.com/Rimeeeeee/alloy", branch = "feat/eip8141-transaction", default-features = false }
-alloy-rpc-types-engine = { git = "https://github.com/Rimeeeeee/alloy", branch = "feat/eip8141-transaction", default-features = false }
+alloy-rpc-types-eth = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
+alloy-rpc-types-engine = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
 
 # revm
-revm = { git = "https://github.com/Soubhik-10/revm", branch = "feat/eip8141-frame-transactions", default-features = false }
+revm = { git = "https://github.com/Rimeeeeee/revm", rev = "c3125f713bcd7ced48b4c34c37019f7a011ced7d", default-features = false }
 
 # tracing
 tracing = { version = "0.1", default-features = false }
@@ -64,6 +64,4 @@ serde_json = "1"
 test-case = "3"
 
 [patch.crates-io]
-alloy-hardforks = { git = "https://github.com/Rimeeeeee/hardforks", branch = "eip-8268" }
-# alloy-eip7928 = { git = "https://github.com/Rimeeeeee/eips", branch = "eip-8268" }
-revm = { git = "https://github.com/Rimeeeeee/revm", branch = "bogota" }
+revm = { git = "https://github.com/Rimeeeeee/revm", rev = "c3125f713bcd7ced48b4c34c37019f7a011ced7d" }

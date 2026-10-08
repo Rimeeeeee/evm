@@ -587,7 +587,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod frame_tests {
     use super::*;
     use crate::{block::SystemCaller, EthEvmFactory, Evm, EvmEnv, EvmFactory};
     use alloc::vec;
