@@ -41,16 +41,16 @@ alloy-evm = { version = "0.39.0", path = "crates/evm", default-features = false 
 alloy-eip2124 = { version = "0.2", default-features = false }
 alloy-eip7928 = { version = "0.4.1", default-features = false }
 alloy-chains = { version = "0.2.0", default-features = false }
-alloy-eips = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
-alloy-consensus = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
+alloy-eips = { git = "https://github.com/Rimeeeeee/alloy", rev = "4f840608305d88164248ac2a7e0caf05c2e0ea0c", default-features = false }
+alloy-consensus = { git = "https://github.com/Rimeeeeee/alloy", rev = "4f840608305d88164248ac2a7e0caf05c2e0ea0c", default-features = false }
 alloy-primitives = { version = "1.0.0", default-features = false }
 alloy-sol-types = { version = "1.0.0", default-features = false }
 alloy-hardforks = "0.4.8"
-alloy-rpc-types-eth = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
-alloy-rpc-types-engine = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
+alloy-rpc-types-eth = { git = "https://github.com/Rimeeeeee/alloy", rev = "4f840608305d88164248ac2a7e0caf05c2e0ea0c", default-features = false }
+alloy-rpc-types-engine = { git = "https://github.com/Rimeeeeee/alloy", rev = "4f840608305d88164248ac2a7e0caf05c2e0ea0c", default-features = false }
 
 # revm
-revm = { git = "https://github.com/Rimeeeeee/revm", rev = "6bc175f3f8032b13a8bb1e7e1219e8f9fe45ffa4", default-features = false }
+revm = { git = "https://github.com/Rimeeeeee/revm", rev = "613fd7fd0c1300d3409e213183ace0f9cfc660f5", default-features = false }
 
 # tracing
 tracing = { version = "0.1", default-features = false }
@@ -64,4 +64,4 @@ serde_json = "1"
 test-case = "3"
 
 [patch.crates-io]
-revm = { git = "https://github.com/Rimeeeeee/revm", rev = "6bc175f3f8032b13a8bb1e7e1219e8f9fe45ffa4" }
+revm = { git = "https://github.com/Rimeeeeee/revm", rev = "613fd7fd0c1300d3409e213183ace0f9cfc660f5" }
