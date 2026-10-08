@@ -50,7 +50,7 @@ alloy-rpc-types-eth = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f898
 alloy-rpc-types-engine = { git = "https://github.com/Rimeeeeee/alloy", rev = "7f8984c56402a2b5da5340d33a5fcefcef2bc578", default-features = false }
 
 # revm
-revm = { git = "https://github.com/Rimeeeeee/revm", rev = "f0b13234c7094df8354b3f22e9c459005646112f", default-features = false }
+revm = { git = "https://github.com/Rimeeeeee/revm", rev = "6bc175f3f8032b13a8bb1e7e1219e8f9fe45ffa4", default-features = false }
 
 # tracing
 tracing = { version = "0.1", default-features = false }
@@ -64,4 +64,4 @@ serde_json = "1"
 test-case = "3"
 
 [patch.crates-io]
-revm = { git = "https://github.com/Rimeeeeee/revm", rev = "f0b13234c7094df8354b3f22e9c459005646112f" }
+revm = { git = "https://github.com/Rimeeeeee/revm", rev = "6bc175f3f8032b13a8bb1e7e1219e8f9fe45ffa4" }
