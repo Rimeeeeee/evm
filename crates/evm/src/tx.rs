@@ -422,8 +422,7 @@ pub fn tx_env_from_eip8141(tx: TxEip8141, gas_params: &GasParams) -> TxEnv {
         signatures: tx.signatures,
         signature_hash,
         max_priority_fee_per_gas: tx.fees.max_priority_fee_per_gas,
-        max_fee_per_gas: tx.fees.max_fee_per_gas,
-        max_fee_per_blob_gas: tx.fees.max_fee_per_blob_gas,
+        max_fee: tx.fees.max_fee,
     };
     let gas_limit =
         frame_transaction.gas_limit_with_params(tx.sender, gas_params).unwrap_or(u64::MAX);
@@ -432,7 +431,7 @@ pub fn tx_env_from_eip8141(tx: TxEip8141, gas_params: &GasParams) -> TxEnv {
         tx_type: TxEip8141::tx_type(),
         caller: tx.sender,
         gas_limit,
-        gas_price: tx.fees.max_fee_per_gas.saturating_to(),
+        gas_price: (tx.fees.max_fee / U256::from(gas_limit.max(1))).saturating_to(),
         kind: TxKind::Call(tx.sender),
         value: U256::ZERO,
         data: Bytes::new(),
@@ -440,7 +439,7 @@ pub fn tx_env_from_eip8141(tx: TxEip8141, gas_params: &GasParams) -> TxEnv {
         chain_id: Some(tx.chain_id),
         gas_priority_fee: Some(tx.fees.max_priority_fee_per_gas.saturating_to()),
         blob_hashes: tx.blob_versioned_hashes,
-        max_fee_per_blob_gas: tx.fees.max_fee_per_blob_gas.saturating_to(),
+        max_fee_per_blob_gas: u128::MAX,
         frame_transaction: Some(Box::new(frame_transaction)),
         ..Default::default()
     }
@@ -762,8 +761,7 @@ mod tests {
             }],
             fees: TransactionFees {
                 max_priority_fee_per_gas: U256::from(2),
-                max_fee_per_gas: U256::from(10),
-                max_fee_per_blob_gas: U256::from(4),
+                max_fee: U256::from(10),
             },
             blob_versioned_hashes: vec![blob_hash],
         };
@@ -780,15 +778,14 @@ mod tests {
         assert_eq!(frame_transaction.nonce_keys, tx.nonce_keys);
         assert_eq!(frame_transaction.nonce_calldata, vec![0xc1, 0x01, 0x07]);
         assert_eq!(env.chain_id, Some(tx.chain_id));
-        assert_eq!(env.gas_price, tx.fees.max_fee_per_gas.saturating_to());
+        assert_eq!(env.gas_price, (tx.fees.max_fee / U256::from(env.gas_limit)).saturating_to());
         assert_eq!(env.gas_priority_fee, Some(tx.fees.max_priority_fee_per_gas.saturating_to()));
         assert_eq!(env.blob_hashes, tx.blob_versioned_hashes);
-        assert_eq!(env.max_fee_per_blob_gas, tx.fees.max_fee_per_blob_gas.saturating_to());
+        assert_eq!(env.max_fee_per_blob_gas, u128::MAX);
         assert_eq!(env.gas_limit, frame_transaction.gas_limit(sender).unwrap());
         assert_eq!(frame_transaction.signature_hash, signature_hash);
         assert_eq!(frame_transaction.max_priority_fee_per_gas, tx.fees.max_priority_fee_per_gas);
-        assert_eq!(frame_transaction.max_fee_per_gas, tx.fees.max_fee_per_gas);
-        assert_eq!(frame_transaction.max_fee_per_blob_gas, tx.fees.max_fee_per_blob_gas);
+        assert_eq!(frame_transaction.max_fee, tx.fees.max_fee);
         assert_eq!(frame_transaction.frames, tx.frames);
         assert_eq!(frame_transaction.signatures, tx.signatures);
     }

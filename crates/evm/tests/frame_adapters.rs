@@ -171,7 +171,7 @@ fn recovered_frame_uses_custom_schedule_during_execution() {
 }
 
 #[test]
-fn post_tx_atomic_batch_errors_survive_the_alloy_adapter() {
+fn assertion_atomic_batch_errors_survive_the_alloy_adapter() {
     for preceding_sender in [false, true] {
         let mut tx = frame_tx();
         if preceding_sender {
@@ -191,7 +191,7 @@ fn post_tx_atomic_batch_errors_survive_the_alloy_adapter() {
                 ..Default::default()
             },
             Frame {
-                mode: FrameMode::PostTx,
+                mode: FrameMode::Assert,
                 target: FrameAddress::from(ASSERTION_TARGET),
                 limits: FrameLimits { execution: 10_000, state: 0 },
                 ..Default::default()
@@ -206,12 +206,12 @@ fn post_tx_atomic_batch_errors_survive_the_alloy_adapter() {
         let recovered = Recovered::new_unchecked(TxEnvelope::Eip8141(tx.seal_slow()), SENDER);
         let mut evm = EthEvmFactory::default().create_evm(database, custom_env());
         let error = evm.transact(recovered).unwrap_err();
-        assert!(error.to_string().contains("EIP-7906 atomic batch cannot end on a POST_TX frame"));
+        assert!(error.to_string().contains("EIP-7906 atomic batch cannot end on a ASSERT frame"));
     }
 }
 
 #[test]
-fn post_tx_frame_observes_state_diff_through_alloy_adapter() {
+fn assertion_frame_observes_state_diff_through_alloy_adapter() {
     let mut db = db();
     // Store 1 in slot zero.
     db.insert_account_info(
@@ -244,7 +244,7 @@ fn post_tx_frame_observes_state_diff_through_alloy_adapter() {
             ..Default::default()
         },
         Frame {
-            mode: FrameMode::PostTx,
+            mode: FrameMode::Assert,
             target: FrameAddress::from(ASSERTION_TARGET),
             limits: FrameLimits { execution: 10_000, state: 0 },
             ..Default::default()
@@ -327,11 +327,8 @@ fn keyed_nonce_consensus_and_execution_gas_caps_agree() {
     for floor_binding in [false, true] {
         for count in [0, 1, 2, 16] {
             let mut tx = frame_tx();
-            tx.nonce_keys = Some(if count == 0 {
-                vec![U256::ZERO]
-            } else {
-                (1..=count).map(U256::from).collect()
-            });
+            tx.nonce_keys =
+                Some(if count == 0 { vec![] } else { (0..count).map(U256::from).collect() });
             if floor_binding {
                 tx.frames[0].data = vec![1; 1_000].into();
                 tx.frames[0].limits.execution = 0;
@@ -531,7 +528,7 @@ fn rpc_frame_uses_custom_schedule_and_preserves_request_frames() {
         .map(|frame| frame.try_into().unwrap())
         .collect();
     let env = request.try_into_tx_env(&custom_env()).unwrap();
-    assert_eq!(env.gas_limit, 62_795);
+    assert_eq!(env.gas_limit, 62_555);
     assert_eq!(env.frame_transaction.as_ref().unwrap().frames, frames);
     let mut evm = EthEvmFactory::default().create_evm(db(), custom_env());
     assert!(evm.transact(env).is_ok());

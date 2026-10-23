@@ -80,6 +80,7 @@ impl<Spec, Block: BlockEnvironment> TryIntoTxEnv<TxEnv, Spec, Block> for Transac
             frames,
             signatures,
             eip8141_fees,
+            max_fee,
             ..
         } = self;
 
@@ -97,56 +98,14 @@ impl<Spec, Block: BlockEnvironment> TryIntoTxEnv<TxEnv, Spec, Block> for Transac
             return Err(EthTxEnvError::Eip8141InvalidOuterFields);
         }
 
-        // Explicit RPC fields override the full-width fallback, just as in Alloy's builder.
-        // Validate the resolved U256 fees, not their optional u128 representations.
-        let max_fee_per_gas = max_fee_per_gas
-            .map(U256::from)
-            .or_else(|| eip8141_fees.map(|fees| fees.max_fee_per_gas));
-        let max_priority_fee_per_gas = max_priority_fee_per_gas
-            .map(U256::from)
-            .or_else(|| eip8141_fees.map(|fees| fees.max_priority_fee_per_gas));
-        let max_fee_per_blob_gas = max_fee_per_blob_gas
-            .map(U256::from)
-            .or_else(|| eip8141_fees.map(|fees| fees.max_fee_per_blob_gas));
-        let requested_max_fee_per_gas = max_fee_per_gas;
-        let requested_max_priority_fee_per_gas = max_priority_fee_per_gas;
-        let requested_max_fee_per_blob_gas = max_fee_per_blob_gas;
-        let call_max_fee_per_blob_gas = if tx_type == TxType::Eip8141 as u8
-            && blob_versioned_hashes.as_ref().is_none_or(|hashes| hashes.is_empty())
+        if tx_type == TxType::Eip8141 as u8
+            && (max_fee_per_gas.is_some() || max_fee_per_blob_gas.is_some())
         {
-            // `CallFees` applies EIP-4844's requirement that this field implies at least one
-            // blob. For EIP-8141, zero is the canonical fee cap when no blobs are present.
-            None
-        } else {
-            max_fee_per_blob_gas
-        };
-
-        let CallFees { max_priority_fee_per_gas, gas_price, max_fee_per_blob_gas } =
-            CallFees::ensure_fees(
-                gas_price.map(U256::from),
-                max_fee_per_gas,
-                max_priority_fee_per_gas,
-                U256::from(evm_env.block_env().basefee()),
-                blob_versioned_hashes.as_deref(),
-                call_max_fee_per_blob_gas,
-                evm_env.block_env().blob_gasprice().map(U256::from),
-            )?;
-
-        let gas_limit = gas.unwrap_or(
-            // Use maximum allowed gas limit. The reason for this
-            // is that both Erigon and Geth use pre-configured gas cap even if
-            // it's possible to derive the gas limit from the block:
-            // <https://github.com/ledgerwatch/erigon/blob/eae2d9a79cb70dbe30b3a6b79c436872e4605458/cmd/rpcdaemon/commands/trace_adhoc.go#L956
-            // https://github.com/ledgerwatch/erigon/blob/eae2d9a79cb70dbe30b3a6b79c436872e4605458/eth/ethconfig/config.go#L94>
-            evm_env.block_env().gas_limit(),
-        );
-
+            return Err(EthTxEnvError::Eip8141InvalidOuterFields);
+        }
         let chain_id = chain_id.unwrap_or(evm_env.cfg_env().chain_id);
-
         let caller = from.unwrap_or_default();
-
         let nonce = nonce.unwrap_or_default();
-
         if tx_type == TxType::Eip8141 as u8 {
             let tx = TxEip8141 {
                 chain_id,
@@ -161,15 +120,30 @@ impl<Spec, Block: BlockEnvironment> TryIntoTxEnv<TxEnv, Spec, Block> for Transac
                     .map_err(EthTxEnvError::Eip8141MissingLimit)?,
                 signatures: signatures.unwrap_or_default(),
                 fees: TransactionFees {
-                    max_priority_fee_per_gas: requested_max_priority_fee_per_gas
+                    max_priority_fee_per_gas: max_priority_fee_per_gas
+                        .map(U256::from)
+                        .or_else(|| eip8141_fees.map(|fees| fees.max_priority_fee_per_gas))
                         .unwrap_or_default(),
-                    max_fee_per_gas: requested_max_fee_per_gas.unwrap_or(gas_price),
-                    max_fee_per_blob_gas: requested_max_fee_per_blob_gas.unwrap_or_default(),
+                    max_fee: max_fee
+                        .or_else(|| eip8141_fees.map(|fees| fees.max_fee))
+                        .unwrap_or(U256::MAX),
                 },
                 blob_versioned_hashes: blob_versioned_hashes.unwrap_or_default(),
             };
             return Ok(tx_env_from_eip8141(tx, &evm_env.cfg_env().gas_params));
         }
+
+        let CallFees { max_priority_fee_per_gas, gas_price, max_fee_per_blob_gas } =
+            CallFees::ensure_fees(
+                gas_price.map(U256::from),
+                max_fee_per_gas.map(U256::from),
+                max_priority_fee_per_gas.map(U256::from),
+                U256::from(evm_env.block_env().basefee()),
+                blob_versioned_hashes.as_deref(),
+                max_fee_per_blob_gas.map(U256::from),
+                evm_env.block_env().blob_gasprice().map(U256::from),
+            )?;
+        let gas_limit = gas.unwrap_or(evm_env.block_env().gas_limit());
 
         let env = TxEnv {
             tx_type,
@@ -228,9 +202,8 @@ mod tests {
         let request = TransactionRequest {
             from: Some(Address::ZERO),
             nonce: Some(0),
-            max_fee_per_gas: Some(1),
+            max_fee: Some(U256::from(1)),
             max_priority_fee_per_gas: Some(0),
-            max_fee_per_blob_gas: Some(0),
             blob_versioned_hashes: Some(Vec::new()),
             frames: Some(vec![Frame::default().into()]),
             signatures: Some(Vec::new()),
@@ -242,22 +215,20 @@ mod tests {
         let env = request.try_into_tx_env(&evm_env).expect("valid frame request");
         assert_eq!(env.tx_type, TxType::Eip8141 as u8);
         assert!(env.blob_hashes.is_empty());
-        assert_eq!(env.frame_transaction.as_deref().unwrap().max_fee_per_blob_gas, U256::ZERO);
+        assert_eq!(env.frame_transaction.as_deref().unwrap().max_fee, U256::from(1));
     }
 
     #[test]
     fn frame_request_preserves_full_width_fees() {
         let fees = TransactionFees {
             max_priority_fee_per_gas: U256::from(u128::MAX) + U256::from(1),
-            max_fee_per_gas: U256::from(u128::MAX) + U256::from(2),
-            max_fee_per_blob_gas: U256::ZERO,
+            max_fee: U256::from(u128::MAX) + U256::from(2),
         };
         let request = TransactionRequest {
             from: Some(Address::ZERO),
             nonce: Some(0),
             max_fee_per_gas: None,
             max_priority_fee_per_gas: None,
-            max_fee_per_blob_gas: Some(0),
             blob_versioned_hashes: Some(Vec::new()),
             frames: Some(vec![Frame::default().into()]),
             signatures: Some(Vec::<FrameSignature>::new()),
@@ -270,47 +241,39 @@ mod tests {
         let env = request.try_into_tx_env(&evm_env).expect("valid frame request");
         let frame_tx = env.frame_transaction.as_deref().expect("frame payload");
         assert_eq!(frame_tx.max_priority_fee_per_gas, fees.max_priority_fee_per_gas);
-        assert_eq!(frame_tx.max_fee_per_gas, fees.max_fee_per_gas);
-        assert_eq!(frame_tx.max_fee_per_blob_gas, fees.max_fee_per_blob_gas);
+        assert_eq!(frame_tx.max_fee, fees.max_fee);
     }
 
     #[test]
     fn frame_request_explicit_fees_override_full_width_fallback() {
         let request = TransactionRequest {
             frames: Some(vec![Frame::default().into()]),
-            max_fee_per_gas: Some(20),
+            max_fee: Some(U256::from(20)),
             max_priority_fee_per_gas: Some(2),
-            max_fee_per_blob_gas: Some(0),
             eip8141_fees: Some(TransactionFees {
-                max_fee_per_gas: U256::from(u128::MAX) + U256::from(1),
+                max_fee: U256::from(u128::MAX) + U256::from(1),
                 max_priority_fee_per_gas: U256::from(10),
-                max_fee_per_blob_gas: U256::from(5),
             }),
             ..Default::default()
         };
         let evm_env: EvmEnv = EvmEnv::default();
         let env = request.try_into_tx_env(&evm_env).expect("valid overridden fees");
         let fees = env.frame_transaction.as_deref().unwrap();
-        assert_eq!(fees.max_fee_per_gas, U256::from(20));
+        assert_eq!(fees.max_fee, U256::from(20));
         assert_eq!(fees.max_priority_fee_per_gas, U256::from(2));
-        assert_eq!(fees.max_fee_per_blob_gas, U256::ZERO);
     }
 
     #[test]
-    fn frame_request_validates_full_width_fees() {
+    fn frame_request_rejects_per_resource_fee_caps() {
         let request = TransactionRequest {
             frames: Some(vec![Frame::default().into()]),
-            eip8141_fees: Some(TransactionFees {
-                max_fee_per_gas: U256::from(u128::MAX) + U256::from(1),
-                max_priority_fee_per_gas: U256::from(u128::MAX) + U256::from(2),
-                max_fee_per_blob_gas: U256::ZERO,
-            }),
+            max_fee_per_gas: Some(20),
             ..Default::default()
         };
-        let evm_env: EvmEnv = EvmEnv::default();
+        let env: EvmEnv = EvmEnv::default();
         assert!(matches!(
-            request.try_into_tx_env(&evm_env),
-            Err(EthTxEnvError::CallFees(CallFeesError::TipAboveFeeCap))
+            request.try_into_tx_env(&env),
+            Err(EthTxEnvError::Eip8141InvalidOuterFields)
         ));
     }
 }
