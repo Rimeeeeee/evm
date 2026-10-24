@@ -591,7 +591,10 @@ where
         }
         .map_err(|e| e.to_string())?;
 
-        Ok(Some(precompile_output_to_interpreter_result(precompile_output, inputs.gas_limit)))
+        let mut result =
+            precompile_output_to_interpreter_result(precompile_output, inputs.gas_limit);
+        revm::handler::apply_eip8151(context, inputs.bytecode_address, &mut result);
+        Ok(Some(result))
     }
 
     fn warm_addresses(&self) -> &AddressSet {

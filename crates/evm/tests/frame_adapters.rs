@@ -72,6 +72,7 @@ fn recovered() -> Recovered<TxEnvelope> {
 
 const fn context() -> EthBlockExecutionCtx<'static> {
     EthBlockExecutionCtx {
+        parent_timestamp: None,
         parent_hash: B256::ZERO,
         parent_beacon_block_root: None,
         ommers: &[],

@@ -34,6 +34,8 @@ use revm::{
 pub struct EthBlockExecutionCtx<'a> {
     /// Parent block hash.
     pub parent_hash: B256,
+    /// Parent timestamp, if known without consulting the execution database.
+    pub parent_timestamp: Option<u64>,
     /// Parent beacon block root.
     pub parent_beacon_block_root: Option<B256>,
     /// Block ommers
@@ -123,115 +125,6 @@ pub fn transaction_gas_reservation<T: TransactionTr>(tx: &T, tx_gas_limit_cap: u
     (execution_reservation, state_reservation)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::transaction_gas_reservation;
-    use alloc::{boxed::Box, vec, vec::Vec};
-    use alloy_eips::eip8141::{Frame, FrameLimits};
-    use alloy_primitives::{Address, Bytes};
-    use revm::context::{transaction::FrameTransaction, TxEnv};
-
-    fn frame_tx_env(frame_transaction: FrameTransaction) -> TxEnv {
-        let caller = Address::ZERO;
-        let gas_limit = frame_transaction.gas_limit(caller).expect("valid frame gas limit");
-
-        TxEnv {
-            caller,
-            gas_limit,
-            frame_transaction: Some(Box::new(frame_transaction)),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn standard_transaction_reservation_is_unchanged() {
-        let tx = TxEnv { gas_limit: 30_000_000, ..Default::default() };
-
-        assert_eq!(transaction_gas_reservation(&tx, 16_777_216), (16_777_216, 30_000_000));
-    }
-
-    #[test]
-    fn frame_transaction_reserves_execution_and_state_independently() {
-        let frame_transaction = FrameTransaction {
-            frames: vec![Frame {
-                limits: FrameLimits { execution: 50_000, state: 7_000 },
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
-        let expected_execution = frame_transaction
-            .intrinsic_gas(Address::ZERO)
-            .expect("valid intrinsic gas")
-            .checked_add(50_000)
-            .expect("valid execution reservation");
-        let tx = frame_tx_env(frame_transaction);
-
-        assert_eq!(tx.gas_limit, expected_execution + 7_000);
-        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (expected_execution, 7_000));
-    }
-
-    #[test]
-    fn frame_transaction_reservation_handles_calldata_floor() {
-        let frame_transaction = FrameTransaction {
-            frames: vec![Frame {
-                limits: FrameLimits { execution: 0, state: 123 },
-                data: Bytes::from(vec![1; 1_000]),
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
-        let expected_execution =
-            frame_transaction.calldata_floor_gas(Address::ZERO).expect("valid calldata floor");
-        assert!(
-            expected_execution
-                > frame_transaction.intrinsic_gas(Address::ZERO).expect("valid intrinsic gas")
-        );
-        let tx = frame_tx_env(frame_transaction);
-
-        assert_eq!(tx.gas_limit, expected_execution + 123);
-        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (expected_execution, 123));
-    }
-
-    #[test]
-    fn inconsistent_frame_gas_limit_saturates_execution_reservation() {
-        let frame_transaction = FrameTransaction {
-            frames: vec![Frame {
-                limits: FrameLimits { execution: 0, state: 2 },
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
-        let tx = TxEnv {
-            gas_limit: 1,
-            frame_transaction: Some(Box::new(frame_transaction)),
-            ..Default::default()
-        };
-
-        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (u64::MAX, 2));
-    }
-
-    #[test]
-    fn overflowing_frame_state_reservation_saturates_both_dimensions() {
-        let frame_transaction = FrameTransaction {
-            frames: Vec::from([
-                Frame {
-                    limits: FrameLimits { execution: 0, state: u64::MAX },
-                    ..Default::default()
-                },
-                Frame { limits: FrameLimits { execution: 0, state: 1 }, ..Default::default() },
-            ]),
-            ..Default::default()
-        };
-        let tx = TxEnv {
-            gas_limit: u64::MAX,
-            frame_transaction: Some(Box::new(frame_transaction)),
-            ..Default::default()
-        };
-
-        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (u64::MAX, u64::MAX));
-    }
-}
-
 impl<H, T> TxResult for EthTxResult<H, T>
 where
     H: Send + 'static,
@@ -314,6 +207,7 @@ where
     type Result = EthTxResult<E::HaltReason, <R::Transaction as TransactionEnvelope>::TxType>;
 
     fn apply_pre_execution_changes(&mut self) -> Result<(), BlockExecutionError> {
+        super::eip8253::apply(&mut self.evm, &self.spec, self.ctx.parent_timestamp)?;
         self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
         self.system_caller
             .apply_beacon_root_contract_call(self.ctx.parent_beacon_block_root, &mut self.evm)?;
@@ -581,5 +475,114 @@ where
         I: Inspector<EvmF::Context<DB>>,
     {
         EthBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::transaction_gas_reservation;
+    use alloc::{boxed::Box, vec, vec::Vec};
+    use alloy_eips::eip8141::{Frame, FrameLimits};
+    use alloy_primitives::{Address, Bytes};
+    use revm::context::{transaction::FrameTransaction, TxEnv};
+
+    fn frame_tx_env(frame_transaction: FrameTransaction) -> TxEnv {
+        let caller = Address::ZERO;
+        let gas_limit = frame_transaction.gas_limit(caller).expect("valid frame gas limit");
+
+        TxEnv {
+            caller,
+            gas_limit,
+            frame_transaction: Some(Box::new(frame_transaction)),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn standard_transaction_reservation_is_unchanged() {
+        let tx = TxEnv { gas_limit: 30_000_000, ..Default::default() };
+
+        assert_eq!(transaction_gas_reservation(&tx, 16_777_216), (16_777_216, 30_000_000));
+    }
+
+    #[test]
+    fn frame_transaction_reserves_execution_and_state_independently() {
+        let frame_transaction = FrameTransaction {
+            frames: vec![Frame {
+                limits: FrameLimits { execution: 50_000, state: 7_000 },
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let expected_execution = frame_transaction
+            .intrinsic_gas(Address::ZERO)
+            .expect("valid intrinsic gas")
+            .checked_add(50_000)
+            .expect("valid execution reservation");
+        let tx = frame_tx_env(frame_transaction);
+
+        assert_eq!(tx.gas_limit, expected_execution + 7_000);
+        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (expected_execution, 7_000));
+    }
+
+    #[test]
+    fn frame_transaction_reservation_handles_calldata_floor() {
+        let frame_transaction = FrameTransaction {
+            frames: vec![Frame {
+                limits: FrameLimits { execution: 0, state: 123 },
+                data: Bytes::from(vec![1; 1_000]),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let expected_execution =
+            frame_transaction.calldata_floor_gas(Address::ZERO).expect("valid calldata floor");
+        assert!(
+            expected_execution
+                > frame_transaction.intrinsic_gas(Address::ZERO).expect("valid intrinsic gas")
+        );
+        let tx = frame_tx_env(frame_transaction);
+
+        assert_eq!(tx.gas_limit, expected_execution + 123);
+        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (expected_execution, 123));
+    }
+
+    #[test]
+    fn inconsistent_frame_gas_limit_saturates_execution_reservation() {
+        let frame_transaction = FrameTransaction {
+            frames: vec![Frame {
+                limits: FrameLimits { execution: 0, state: 2 },
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let tx = TxEnv {
+            gas_limit: 1,
+            frame_transaction: Some(Box::new(frame_transaction)),
+            ..Default::default()
+        };
+
+        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (u64::MAX, 2));
+    }
+
+    #[test]
+    fn overflowing_frame_state_reservation_saturates_both_dimensions() {
+        let frame_transaction = FrameTransaction {
+            frames: Vec::from([
+                Frame {
+                    limits: FrameLimits { execution: 0, state: u64::MAX },
+                    ..Default::default()
+                },
+                Frame { limits: FrameLimits { execution: 0, state: 1 }, ..Default::default() },
+            ]),
+            ..Default::default()
+        };
+        let tx = TxEnv {
+            gas_limit: u64::MAX,
+            frame_transaction: Some(Box::new(frame_transaction)),
+            ..Default::default()
+        };
+
+        assert_eq!(transaction_gas_reservation(&tx, u64::MAX), (u64::MAX, u64::MAX));
     }
 }

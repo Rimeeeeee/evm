@@ -648,6 +648,7 @@ pub trait BlockExecutorFactory: 'static {
     ///
     /// // Create execution context with consensus-specific data required for block execution
     /// let ctx = EthBlockExecutionCtx {
+    ///     parent_timestamp: None,
     ///     parent_hash: parent_block.hash(),
     ///     parent_beacon_block_root: parent_block.parent_beacon_block_root,
     ///     ommers: &uncle_blocks,

@@ -30,6 +30,7 @@ pub use block::*;
 
 pub mod dao_fork;
 pub mod eip6110;
+pub mod eip8253;
 pub mod receipt_builder;
 pub mod spec;
 
